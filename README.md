@@ -319,7 +319,9 @@ claude mcp add chrome-devtools --scope project -- npx -y chrome-devtools-mcp@lat
 
 Then ask the agent to open your dev server and use the `warpstate_*` tools. Requirements: Chrome 150+ (WebMCP behind `--enable-features=WebMCP`) and a dev build of your app. Chrome DevTools MCP leaves tools marked with the WebMCP `debugging` annotation out of `list_webmcp_tools`, so warpstate does not set that mark by default. Pass `registerWarpTools({ debugging: true })` if you want the tools listed only as developer tools (`--categoryExperimentalThirdParty`).
 
-> The chain *page → Chrome WebMCP → CDP `WebMCP.invokeTool`* is covered by this repo's e2e tests. The Chrome DevTools MCP hop itself is not yet tested here.
+Every Chrome DevTools MCP tool takes a `pageId` (from `list_pages`), and `execute_webmcp_tool` takes the tool input as a JSON string: `{ "pageId": 1, "toolName": "warpstate_load", "input": "{\"scenario\":\"cart-with-coupon\"}" }`.
+
+> The chain *page → Chrome WebMCP → CDP `WebMCP.invokeTool`* is covered by this repo's e2e tests in CI. The full *MCP client → Chrome DevTools MCP 1.13 → Chrome 157 → warpstate* chain was validated by hand against a local dev server. The tools were listed with `debugging: false`, and `status`, `list_scenarios` and `load { scenario }` all ran, opening the cart at `/cart` with `status: "ready"`. That hop is not automated in CI yet.
 
 ## Production safety
 
