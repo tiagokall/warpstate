@@ -1,0 +1,28 @@
+{
+  "name": "@warpstate/core",
+  "version": "0.0.0",
+  "description": "Core of warpstate: snapshot format, validation, adapter registry and hydration lifecycle.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "repository": { "type": "git", "url": "git+https://github.com/tiagokall/warpstate.git", "directory": "packages/core" },
+  "homepage": "https://github.com/tiagokall/warpstate#readme",
+  "keywords": ["e2e", "testing", "snapshot", "state", "playwright", "react", "tanstack"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./noop": { "types": "./dist/noop.d.ts", "import": "./dist/noop.js" },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {},
+  "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" },
+  "peerDependenciesMeta": {},
+  "devDependencies": { "zod": "^4.6.7", "jsdom": "^31.0.1" }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@warpstate/react",
+  "version": "0.0.0",
+  "description": "React bindings for warpstate: WarpProvider, useWarp and the capture shortcut.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "repository": { "type": "git", "url": "git+https://github.com/tiagokall/warpstate.git", "directory": "packages/react" },
+  "homepage": "https://github.com/tiagokall/warpstate#readme",
+  "keywords": ["e2e", "testing", "snapshot", "state", "playwright", "react", "tanstack"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./noop": { "types": "./dist/noop.d.ts", "import": "./dist/noop.js" },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": { "@warpstate/core": "workspace:^" },
+  "peerDependencies": { "react": "^18.0.0 || ^19.0.0" },
+  "peerDependenciesMeta": {},
+  "devDependencies": { "react": "^19.3.1", "react-dom": "^19.3.1", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "zod": "^4.6.7", "jsdom": "^31.0.1", "@testing-library/react": "^16.3.3" }
+}

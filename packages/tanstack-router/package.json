@@ -1,0 +1,28 @@
+{
+  "name": "@warpstate/tanstack-router",
+  "version": "0.0.0",
+  "description": "Drop-in createRouter replacement that boots TanStack Router from a warpstate snapshot.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "repository": { "type": "git", "url": "git+https://github.com/tiagokall/warpstate.git", "directory": "packages/tanstack-router" },
+  "homepage": "https://github.com/tiagokall/warpstate#readme",
+  "keywords": ["e2e", "testing", "snapshot", "state", "playwright", "react", "tanstack"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./noop": { "types": "./dist/noop.d.ts", "import": "./dist/noop.js" },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": { "@warpstate/core": "workspace:^" },
+  "peerDependencies": { "@tanstack/react-router": "^1.120.0" },
+  "peerDependenciesMeta": {},
+  "devDependencies": { "@tanstack/react-router": "^1.170.46", "react": "^19.3.1", "react-dom": "^19.3.1", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "zod": "^4.6.7", "jsdom": "^31.0.1", "@testing-library/react": "^16.3.3" }
+}

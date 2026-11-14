@@ -1,0 +1,49 @@
+{
+  "name": "@warpstate/vite",
+  "version": "0.0.0",
+  "description": "Vite plugin that replaces the warpstate runtime with no-ops in production builds.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tiagokall/warpstate.git",
+    "directory": "packages/vite"
+  },
+  "homepage": "https://github.com/tiagokall/warpstate#readme",
+  "keywords": [
+    "e2e",
+    "testing",
+    "snapshot",
+    "state",
+    "playwright",
+    "react",
+    "tanstack"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "peerDependenciesMeta": {},
+  "devDependencies": {
+    "vite": "^8.3.8"
+  }
+}
