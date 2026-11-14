@@ -84,7 +84,7 @@
               "description": "A bigger mug. Much bigger."
             }
           ],
-          "dataUpdatedAt": 1794688453249
+          "dataUpdatedAt": 1794688945138
         }
       },
       {
@@ -100,7 +100,7 @@
             "price": 19,
             "description": "Restores you in a single render."
           },
-          "dataUpdatedAt": 1794688454269
+          "dataUpdatedAt": 1794688946065
         }
       }
     ]

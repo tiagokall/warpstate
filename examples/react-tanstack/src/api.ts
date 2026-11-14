@@ -20,14 +20,16 @@ const PRODUCTS: Product[] = [
 declare global {
   interface Window {
     __apiCalls?: string[];
+    /** Overrides the simulated latency (benchmarks run with several values). */
+    __API_LATENCY__?: number;
   }
 }
 
-const LATENCY_MS = 600;
+const DEFAULT_LATENCY_MS = 600;
 
 async function request<T>(name: string, produce: () => T): Promise<T> {
   (window.__apiCalls ??= []).push(name);
-  await new Promise((resolve) => setTimeout(resolve, LATENCY_MS));
+  await new Promise((resolve) => setTimeout(resolve, window.__API_LATENCY__ ?? DEFAULT_LATENCY_MS));
   return structuredClone(produce());
 }
 

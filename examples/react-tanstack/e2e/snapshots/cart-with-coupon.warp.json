@@ -88,7 +88,7 @@
               "description": "A bigger mug. Much bigger."
             }
           ],
-          "dataUpdatedAt": 1794688453596
+          "dataUpdatedAt": 1794688945053
         }
       },
       {
@@ -104,7 +104,7 @@
             "price": 25,
             "description": "Soft cotton, frozen in its best state."
           },
-          "dataUpdatedAt": 1794688454732
+          "dataUpdatedAt": 1794688946015
         }
       },
       {
@@ -120,7 +120,7 @@
             "price": 14,
             "description": "Holds coffee across timelines."
           },
-          "dataUpdatedAt": 1794688455909
+          "dataUpdatedAt": 1794688946999
         }
       }
     ]
