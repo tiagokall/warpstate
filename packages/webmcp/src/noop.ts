@@ -5,3 +5,4 @@ export type * from "./index";
 
 export const registerWarpTools: typeof Real.registerWarpTools = () => () => undefined;
 export const getModelContext: typeof Real.getModelContext = () => undefined;
+export const estimateTokens: typeof Real.estimateTokens = () => 0;

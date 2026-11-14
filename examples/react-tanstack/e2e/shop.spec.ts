@@ -140,11 +140,13 @@ test.describe("agents (WebMCP)", () => {
     expect(status).toMatchObject({ status: "idle", adapters: ["query", "cart", "checkout", "router"] });
 
     const captured = await callTool(page, "warpstate_capture", { name: "home" });
-    expect(captured.format).toBe("compact");
-    expect(String(captured.snapshot)).toMatch(/^warp1\./);
+    expect(captured.format).toBe("json"); // small snapshot: JSON costs fewer tokens than base64
+    expect(captured.snapshot).toMatchObject({ warpstate: 1, meta: { name: "home" } });
+    const compact = await callTool(page, "warpstate_capture", { format: "compact" });
+    expect(String(compact.snapshot)).toMatch(/^warp1\./);
 
-    const compact = await encodeSnapshot(await readSnapshot("checkout-review"));
-    await Promise.all([page.waitForEvent("load"), callTool(page, "warpstate_load", { snapshot: compact })]);
+    const checkout = await encodeSnapshot(await readSnapshot("checkout-review"));
+    await Promise.all([page.waitForEvent("load"), callTool(page, "warpstate_load", { snapshot: checkout })]);
     await expect(page.getByTestId("ship-to")).toHaveText("Ship to Ada Lovelace, 12 Analytical Row, London");
     await expect.poll(async () => (await callTool(page, "warpstate_status")).status).toBe("ready");
   });

@@ -79,10 +79,30 @@ describe("registerWarpTools", () => {
     expect(out.structuredContent).toMatchObject({ status: "idle", bootedFromSnapshot: false, adapters: ["cart"] });
   });
 
-  it("captures compact snapshots by default", async () => {
+  it("returns JSON for small snapshots in auto mode", async () => {
     const ctx = fakeModelContext();
     registerWarpTools({ modelContext: ctx });
     const out = await call(ctx, "warpstate_capture", { name: "one mug" });
+    expect(out.structuredContent.format).toBe("json");
+  });
+
+  it("switches to the compact form when it costs fewer tokens", async () => {
+    registerAdapter({
+      name: "catalog",
+      capture: () => Array.from({ length: 300 }, (_, i) => ({ id: i, title: `Product ${i}`, inStock: true })),
+      restore: () => {},
+    });
+    const ctx = fakeModelContext();
+    registerWarpTools({ modelContext: ctx });
+    const out = await call(ctx, "warpstate_capture");
+    expect(out.structuredContent.format).toBe("compact");
+    expect(Number(out.structuredContent.bytes)).toBeLessThan(Number(out.structuredContent.jsonBytes) / 4);
+  });
+
+  it("can force the compact form", async () => {
+    const ctx = fakeModelContext();
+    registerWarpTools({ modelContext: ctx });
+    const out = await call(ctx, "warpstate_capture", { name: "one mug", format: "compact" });
     expect(out.structuredContent.format).toBe("compact");
     const snapshot = await decodeSnapshot(out.structuredContent.snapshot);
     expect(snapshot.meta?.name).toBe("one mug");

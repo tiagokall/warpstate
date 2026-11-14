@@ -49,6 +49,14 @@ export function getModelContext(): ModelContextLike | undefined {
   return fromDocument ?? fromNavigator;
 }
 
+/**
+ * Rough LLM token estimate: ~4 characters per token for JSON/text, ~2 for base64
+ * (random-looking strings split into many short tokens).
+ */
+export function estimateTokens(text: string, kind: "text" | "base64"): number {
+  return Math.ceil(text.length / (kind === "text" ? 4 : 2));
+}
+
 /** Result shape understood by WebMCP (any JSON) and MCP clients (`content` blocks). */
 function result(data: unknown, isError = false) {
   return {
@@ -113,13 +121,14 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
       description:
         "Captures the app's current state (route history, data cache, stores) as a warpstate snapshot " +
         "that can later be loaded with the load tool or used in an e2e test. " +
-        "`compact` (default) returns a short 'warp1.' string; `json` returns the readable object.",
+        "`auto` (default) returns whichever form costs fewer tokens: the readable JSON object for small " +
+        "snapshots, a compressed 'warp1.' string for large ones. `json` and `compact` force a form.",
       inputSchema: {
         type: "object",
         properties: {
           name: { type: "string", description: "Scenario name, e.g. 'cart with expired coupon'." },
           description: { type: "string" },
-          format: { type: "string", enum: ["compact", "json"], default: "compact" },
+          format: { type: "string", enum: ["auto", "json", "compact"], default: "auto" },
         },
       },
       annotations: { readOnlyHint: true, debugging: true },
@@ -131,8 +140,13 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
           };
           const { snapshot, warnings } = captureSnapshotWithReport(meta);
           const json = JSON.stringify(snapshot);
-          if (input.format === "json") return result({ format: "json", snapshot, bytes: json.length, warnings });
+          const asJson = () => result({ format: "json", snapshot, bytes: json.length, warnings });
+          if (input.format === "json") return asJson();
           const encoded = await encodeSnapshot(snapshot);
+          // Base64 tokenizes far worse than JSON, so compression only pays off for large snapshots.
+          if (input.format !== "compact" && estimateTokens(json, "text") <= estimateTokens(encoded, "base64")) {
+            return asJson();
+          }
           return result({ format: "compact", snapshot: encoded, bytes: encoded.length, jsonBytes: json.length, warnings });
         } catch (error) {
           return errorResult(error);
