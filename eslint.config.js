@@ -27,4 +27,9 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
+  {
+    // Playwright fixtures receive a `use` callback that is not a React hook.
+    files: ["packages/playwright/**", "**/e2e/**"],
+    rules: { "react-hooks/rules-of-hooks": "off" },
+  },
 );
