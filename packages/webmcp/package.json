@@ -1,0 +1,57 @@
+{
+  "name": "@warpstate/webmcp",
+  "version": "0.0.0",
+  "description": "WebMCP tools that let AI agents capture and load warpstate snapshots in a running app.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tiagokall/warpstate.git",
+    "directory": "packages/webmcp"
+  },
+  "homepage": "https://github.com/tiagokall/warpstate#readme",
+  "keywords": [
+    "e2e",
+    "testing",
+    "snapshot",
+    "state",
+    "playwright",
+    "react",
+    "tanstack",
+    "webmcp",
+    "mcp",
+    "agents"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./noop": {
+      "types": "./dist/noop.d.ts",
+      "import": "./dist/noop.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@warpstate/core": "workspace:^"
+  },
+  "peerDependencies": {},
+  "peerDependenciesMeta": {},
+  "devDependencies": {
+    "zod": "^4.6.7",
+    "jsdom": "^31.0.1"
+  }
+}
