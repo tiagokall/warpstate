@@ -32,8 +32,15 @@ describe("warpstate vite plugin", () => {
   });
 
   it("does nothing in dev or non-production builds", async () => {
-    expect(await setup({ command: "serve", isProduction: false }).resolveId("@warpstate/core")).toBeNull();
-    expect(await setup({ command: "build", isProduction: false }).resolveId("@warpstate/core")).toBeNull();
+    expect(await setup({ command: "serve", mode: "development", isProduction: false }).resolveId("@warpstate/core")).toBeNull();
+    expect(await setup({ command: "build", mode: "staging", isProduction: false }).resolveId("@warpstate/core")).toBeNull();
+  });
+
+  it("strips when either the mode or NODE_ENV says production", async () => {
+    const byMode = setup({ command: "build", mode: "production", isProduction: false });
+    expect(await byMode.resolveId("@warpstate/core")).toEqual({ id: "/resolved/@warpstate/core/noop" });
+    const byEnv = setup({ command: "build", mode: "staging", isProduction: true });
+    expect(await byEnv.resolveId("@warpstate/core")).toEqual({ id: "/resolved/@warpstate/core/noop" });
   });
 
   it("can keep the runtime in production", async () => {

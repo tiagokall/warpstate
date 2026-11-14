@@ -36,7 +36,10 @@ export function warpstate(options: WarpstatePluginOptions = {}): Plugin {
     name: "warpstate",
     enforce: "pre",
     configResolved(config) {
-      strip = config.command === "build" && config.isProduction && !options.keepInProduction;
+      // Either signal is enough: `mode` is what `vite build` sets, `isProduction`
+      // follows NODE_ENV. Stripping too often is safe; shipping the runtime is not.
+      const production = config.mode === "production" || config.isProduction;
+      strip = config.command === "build" && production && !options.keepInProduction;
     },
     async resolveId(source, importer, resolveOptions) {
       if (!strip || !packages.has(source)) return null;

@@ -44,6 +44,8 @@
   },
   "peerDependenciesMeta": {},
   "devDependencies": {
-    "vite": "^8.3.8"
+    "vite": "^8.3.8",
+    "@warpstate/core": "workspace:^",
+    "zod": "^4.6.7"
   }
 }
