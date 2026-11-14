@@ -46,6 +46,16 @@ function overridesFor(lib, version) {
   const major = version.split(".")[0];
   const overrides = { [lib.name]: version };
   for (const [name, spec] of Object.entries(lib.companions ?? {})) {
+    if (spec === "$version?") {
+      // Same version as the library, only if it was published; otherwise keep the lockfile's.
+      try {
+        execSync(`npm view ${name}@${version} version`, { stdio: "pipe" });
+        overrides[name] = version;
+      } catch {
+        /* not published */
+      }
+      continue;
+    }
     overrides[name] = spec === "$version" ? version : spec === "$major" ? `^${major}` : spec;
   }
   return overrides;

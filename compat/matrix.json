@@ -32,7 +32,10 @@
       "packages": [
         "@warpstate/tanstack-router"
       ],
-      "e2e": true
+      "e2e": true,
+      "companions": {
+        "@tanstack/router-plugin": "$version?"
+      }
     },
     {
       "name": "@tanstack/query-core",
