@@ -38,6 +38,13 @@ export interface WarpToolsOptions {
   allowLoad?: boolean;
   /** Override the detected `ModelContext` (tests, polyfills). */
   modelContext?: ModelContextLike;
+  /**
+   * Mark the tools with the WebMCP `debugging` annotation. Agents treat those as
+   * developer-only: Chrome DevTools MCP, for example, leaves them out of
+   * `list_webmcp_tools` and only lists them as third-party developer tools.
+   * Default: `false`, so agents see the tools (they only exist in dev builds).
+   */
+  debugging?: boolean;
 }
 
 /** `document.modelContext` (current spec) or `navigator.modelContext` (older builds, MCP-B polyfill). */
@@ -92,6 +99,7 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
   options.signal?.addEventListener("abort", unregister, { once: true });
   initWarp();
   const prefix = options.prefix ?? "warpstate_";
+  const debugging = options.debugging ?? false;
 
   const tools: WebMcpTool[] = [
     {
@@ -101,7 +109,7 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
         "Reports whether this app was booted from a warpstate snapshot, its hydration status, " +
         "the current route and which state adapters (router, query cache, stores) are registered.",
       inputSchema: { type: "object", properties: {} },
-      annotations: { readOnlyHint: true, debugging: true },
+      annotations: { readOnlyHint: true, debugging },
       execute: async () => {
         const global = getWarpGlobal();
         const active = getActiveSnapshot();
@@ -131,7 +139,7 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
           format: { type: "string", enum: ["auto", "json", "compact"], default: "auto" },
         },
       },
-      annotations: { readOnlyHint: true, debugging: true },
+      annotations: { readOnlyHint: true, debugging },
       execute: async (input) => {
         try {
           const meta = {
@@ -173,7 +181,7 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
         },
         required: ["snapshot"],
       },
-      annotations: { consequentialHint: true, debugging: true },
+      annotations: { consequentialHint: true, debugging },
       execute: async (input) => {
         try {
           const snapshot = await decodeSnapshot(input.snapshot, { source: "warpstate_load" });

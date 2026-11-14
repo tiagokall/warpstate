@@ -25,9 +25,11 @@ test("the app registers its tools with the browser, with schemas and annotations
   await page.reload();
   const [status, capture, load] = await agent.waitForTools(TOOLS);
 
-  expect(status!.annotations).toMatchObject({ readOnly: true, debugging: true });
-  expect(capture!.annotations).toMatchObject({ readOnly: true, debugging: true });
-  expect(load!.annotations).toMatchObject({ readOnly: false, consequential: true });
+  // Not marked `debugging`, so agents list them as regular tools
+  // (Chrome DevTools MCP hides debugging tools from list_webmcp_tools).
+  expect(status!.annotations).toMatchObject({ readOnly: true, debugging: false });
+  expect(capture!.annotations).toMatchObject({ readOnly: true, debugging: false });
+  expect(load!.annotations).toMatchObject({ readOnly: false, consequential: true, debugging: false });
   expect(load!.inputSchema).toMatchObject({ required: ["snapshot"] });
 
   // The page sees the same registry through the spec API.

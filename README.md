@@ -273,6 +273,19 @@ window.__WARPSTATE__.status;                                // "idle" | "pending
 
 A typical loop: an agent reproduces a bug, captures it, and hands the compact string to a developer or to a test.
 
+### Connecting an MCP agent (Claude Code, Claude Desktop, Cursor…)
+
+The official [Chrome DevTools MCP](https://github.com/ChromeDevTools/chrome-devtools-mcp) server can list and call a page's WebMCP tools (`list_webmcp_tools`, `execute_webmcp_tool`), so any MCP client reaches warpstate's tools without a custom bridge:
+
+```sh
+claude mcp add chrome-devtools --scope project -- npx -y chrome-devtools-mcp@latest \
+  --categoryExperimentalWebmcp --chromeArg=--enable-features=WebMCP --isolated
+```
+
+Then ask the agent to open your dev server and use the `warpstate_*` tools. Requirements: Chrome 150+ (WebMCP behind `--enable-features=WebMCP`) and a dev build of your app. Chrome DevTools MCP leaves tools marked with the WebMCP `debugging` annotation out of `list_webmcp_tools`, so warpstate does not set that mark by default. Pass `registerWarpTools({ debugging: true })` if you want the tools listed only as developer tools (`--categoryExperimentalThirdParty`).
+
+> The chain *page → Chrome WebMCP → CDP `WebMCP.invokeTool`* is covered by this repo's e2e tests. The Chrome DevTools MCP hop itself is not yet tested here.
+
 ## Production safety
 
 - `@warpstate/vite` resolves every `@warpstate/*` runtime package to a no-op entry in production builds. `createWarpRouter` becomes a call to `createRouter`, `WarpProvider` renders its children, and adapters become inert objects. The example's CI checks that the production bundle contains none of the runtime ([`check-prod-bundle.mjs`](examples/react-tanstack/scripts/check-prod-bundle.mjs)). In the example this removes 34 KB (11 KB gzipped).

@@ -49,6 +49,16 @@ describe("registerWarpTools", () => {
     expect(ctx.tools.get("warpstate_load")!.annotations).toMatchObject({ consequentialHint: true });
   });
 
+  it("exposes tools to agents by default and can mark them developer-only", () => {
+    const ctx = fakeModelContext();
+    registerWarpTools({ modelContext: ctx });
+    for (const tool of ctx.tools.values()) expect(tool.annotations?.debugging).toBe(false);
+
+    const devCtx = fakeModelContext();
+    registerWarpTools({ modelContext: devCtx, debugging: true });
+    for (const tool of devCtx.tools.values()) expect(tool.annotations?.debugging).toBe(true);
+  });
+
   it("detects document.modelContext", () => {
     const ctx = fakeModelContext();
     (document as { modelContext?: unknown }).modelContext = ctx;
