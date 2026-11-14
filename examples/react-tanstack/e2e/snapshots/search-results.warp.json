@@ -1,0 +1,136 @@
+{
+  "warpstate": 1,
+  "app": {
+    "name": "warp-shop",
+    "schemaVersion": "1"
+  },
+  "meta": {
+    "name": "Search results",
+    "description": "'mug' sorted by price"
+  },
+  "router": {
+    "entries": [
+      "/products?q=&sort=relevance",
+      "/products?q=mug&sort=relevance",
+      "/products?q=mug&sort=price"
+    ],
+    "index": 2
+  },
+  "stores": {
+    "cart": {
+      "items": [],
+      "coupon": null
+    },
+    "checkout": {
+      "shipping": {
+        "name": "",
+        "street": "",
+        "city": ""
+      },
+      "payment": null
+    }
+  },
+  "query": {
+    "queries": [
+      {
+        "queryKey": [
+          "products",
+          {
+            "q": "",
+            "sort": "relevance"
+          }
+        ],
+        "state": {
+          "status": "success",
+          "data": [
+            {
+              "id": 1,
+              "title": "Warp Mug",
+              "price": 14,
+              "description": "Holds coffee across timelines."
+            },
+            {
+              "id": 2,
+              "title": "Snapshot Tee",
+              "price": 25,
+              "description": "Soft cotton, frozen in its best state."
+            },
+            {
+              "id": 3,
+              "title": "Hydration Bottle",
+              "price": 19,
+              "description": "Restores you in a single render."
+            },
+            {
+              "id": 4,
+              "title": "Router Cap",
+              "price": 22,
+              "description": "Keeps your history stack in place."
+            },
+            {
+              "id": 5,
+              "title": "Mug of Holding",
+              "price": 31,
+              "description": "A bigger mug. Much bigger."
+            }
+          ],
+          "dataUpdatedAt": 1794688453244
+        }
+      },
+      {
+        "queryKey": [
+          "products",
+          {
+            "q": "mug",
+            "sort": "relevance"
+          }
+        ],
+        "state": {
+          "status": "success",
+          "data": [
+            {
+              "id": 1,
+              "title": "Warp Mug",
+              "price": 14,
+              "description": "Holds coffee across timelines."
+            },
+            {
+              "id": 5,
+              "title": "Mug of Holding",
+              "price": 31,
+              "description": "A bigger mug. Much bigger."
+            }
+          ],
+          "dataUpdatedAt": 1794688454057
+        }
+      },
+      {
+        "queryKey": [
+          "products",
+          {
+            "q": "mug",
+            "sort": "price"
+          }
+        ],
+        "state": {
+          "status": "success",
+          "data": [
+            {
+              "id": 1,
+              "title": "Warp Mug",
+              "price": 14,
+              "description": "Holds coffee across timelines."
+            },
+            {
+              "id": 5,
+              "title": "Mug of Holding",
+              "price": 31,
+              "description": "A bigger mug. Much bigger."
+            }
+          ],
+          "dataUpdatedAt": 1794688454083
+        }
+      }
+    ]
+  }
+}

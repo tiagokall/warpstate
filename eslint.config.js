@@ -28,6 +28,10 @@ export default tseslint.config(
     },
   },
   {
+    files: ["**/*.{js,mjs}"],
+    languageOptions: { globals: { ...globals.node } },
+  },
+  {
     // Playwright fixtures receive a `use` callback that is not a React hook.
     files: ["packages/playwright/**", "**/e2e/**"],
     rules: { "react-hooks/rules-of-hooks": "off" },

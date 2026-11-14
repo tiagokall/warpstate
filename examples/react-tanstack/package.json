@@ -1,0 +1,39 @@
+{
+  "name": "example-react-tanstack",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p .",
+    "e2e": "playwright test",
+    "record": "RECORD=1 playwright test --project=record",
+    "check:prod": "vite build && node scripts/check-prod-bundle.mjs"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.107.1",
+    "@tanstack/react-router": "^1.170.46",
+    "@warpstate/react": "workspace:^",
+    "@warpstate/tanstack-query": "workspace:^",
+    "@warpstate/tanstack-router": "workspace:^",
+    "@warpstate/webmcp": "workspace:^",
+    "@warpstate/zustand": "workspace:^",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@tanstack/router-plugin": "^1.169.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "@warpstate/core": "workspace:^",
+    "@warpstate/playwright": "workspace:^",
+    "@warpstate/vite": "workspace:^",
+    "vite": "^8.3.8"
+  }
+}
