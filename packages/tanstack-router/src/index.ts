@@ -105,10 +105,18 @@ export function createWarpRouter<
   if (global) global.location = () => router.history.location.href;
 
   if (snapshot) {
-    const unsubscribe = router.subscribe("onRendered", () => {
-      unsubscribe();
-      void markWarpReady();
-    });
+    // Newer versions emit onResolved then onRendered after the initial render; older
+    // ones (≤ 1.140) only emit onResolved, from a layout effect after commit. Take
+    // whichever comes first and yield one task so the DOM is committed either way.
+    let settled = false;
+    const unsubscribers: Array<() => void> = [];
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+      setTimeout(() => void markWarpReady(), 0);
+    };
+    unsubscribers.push(router.subscribe("onRendered", settle), router.subscribe("onResolved", settle));
   }
 
   return router;

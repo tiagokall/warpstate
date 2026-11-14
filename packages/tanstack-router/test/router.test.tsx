@@ -6,12 +6,15 @@ import {
   createRoute,
   useRouter,
 } from "@tanstack/react-router";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { getWarpGlobal, resetWarp } from "@warpstate/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWarpRouter } from "../src";
 
 let cart = { items: 0 };
+
+// Waiting on the DOM/status (rather than wrapping router promises in act()) works on React 18 and 19.
+const waitForReady = () => waitFor(() => expect(getWarpGlobal()?.status).toBe("ready"));
 const loaderSaw: number[] = [];
 
 function makeTree() {
@@ -79,8 +82,10 @@ describe("createWarpRouter without a snapshot", () => {
     const router = createWarpRouter({ routeTree: makeTree() });
     render(<RouterProvider router={router} />);
     await screen.findByText("home");
-    await act(() => router.navigate({ to: "/products/$id", params: { id: "3" } }));
-    await act(() => router.navigate({ to: "/cart" }));
+    void router.navigate({ to: "/products/$id", params: { id: "3" } });
+    await screen.findByText("product 3 with 0 items");
+    void router.navigate({ to: "/cart" });
+    await screen.findByText("back from cart");
     router.history.flush();
     const snapshot = getWarpGlobal()!.capture!();
     expect(snapshot.router).toEqual({ entries: ["/", "/products/3", "/cart"], index: 2 });
@@ -102,7 +107,7 @@ describe("createWarpRouter with a snapshot", () => {
     const router = createWarpRouter({ routeTree: makeTree(), warp: { adapters: [cartAdapter] } });
     expect(cart).toEqual({ items: 5 }); // restored before the router exists
     render(<RouterProvider router={router} />);
-    await act(() => getWarpGlobal()!.ready);
+    await waitForReady();
     expect(getWarpGlobal()?.status).toBe("ready");
     expect(screen.getByText("back from cart")).toBeTruthy();
     expect(window.location.pathname).toBe("/"); // the browser URL is untouched
@@ -111,8 +116,8 @@ describe("createWarpRouter with a snapshot", () => {
   it("restores the back stack", async () => {
     const router = createWarpRouter({ routeTree: makeTree(), warp: { adapters: [cartAdapter] } });
     render(<RouterProvider router={router} />);
-    await act(() => getWarpGlobal()!.ready);
-    act(() => screen.getByText("back from cart").click());
+    await waitForReady();
+    screen.getByText("back from cart").click();
     expect(await screen.findByText("product 42 with 5 items")).toBeTruthy();
     expect(loaderSaw).toEqual([5]);
     expect(getWarpGlobal()!.location!()).toBe("/products/42");
@@ -121,7 +126,7 @@ describe("createWarpRouter with a snapshot", () => {
   it("re-captures an equivalent snapshot", async () => {
     const router = createWarpRouter({ routeTree: makeTree(), warp: { adapters: [cartAdapter] } });
     render(<RouterProvider router={router} />);
-    await act(() => getWarpGlobal()!.ready);
+    await waitForReady();
     const captured = getWarpGlobal()!.capture!();
     expect(captured.router).toEqual({ entries: ["/", "/products/42", "/cart"], index: 2 });
     expect(captured.stores).toEqual({ cart: { items: 5 } });
@@ -133,7 +138,7 @@ describe("createWarpRouter with a snapshot", () => {
     } as never;
     const router = createWarpRouter({ routeTree: makeTree() });
     render(<RouterProvider router={router} />);
-    await act(() => getWarpGlobal()!.ready);
+    await waitForReady();
     expect(screen.getByText("product 1 with 0 items")).toBeTruthy();
   });
 
