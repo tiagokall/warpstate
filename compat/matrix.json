@@ -1,0 +1,104 @@
+{
+  "$comment": "Compatibility matrix. Each case pins one library (via pnpm overrides) and runs the listed packages' typecheck + unit tests; `e2e: true` also runs the example's Playwright suite. Add a version or a library here and run `pnpm compat`.",
+  "libraries": [
+    {
+      "name": "react",
+      "category": "State & routing",
+      "peerRange": "^18.0.0 || ^19.0.0",
+      "versions": [
+        "18.3.1",
+        "19.3.1"
+      ],
+      "companions": {
+        "react-dom": "$version",
+        "@types/react": "$major",
+        "@types/react-dom": "$major"
+      },
+      "packages": [
+        "@warpstate/react",
+        "@warpstate/tanstack-router"
+      ],
+      "e2e": true
+    },
+    {
+      "name": "@tanstack/react-router",
+      "category": "State & routing",
+      "peerRange": "^1.120.0",
+      "versions": [
+        "1.120.20",
+        "1.140.0",
+        "1.170.46"
+      ],
+      "packages": [
+        "@warpstate/tanstack-router"
+      ],
+      "e2e": true
+    },
+    {
+      "name": "@tanstack/query-core",
+      "category": "State & routing",
+      "peerRange": "^5.0.0",
+      "versions": [
+        "5.0.5",
+        "5.60.0",
+        "5.107.1"
+      ],
+      "packages": [
+        "@warpstate/tanstack-query"
+      ]
+    },
+    {
+      "name": "zustand",
+      "category": "State & routing",
+      "peerRange": "^4.0.0 || ^5.0.0",
+      "versions": [
+        "4.5.7",
+        "5.1.0"
+      ],
+      "packages": [
+        "@warpstate/zustand"
+      ]
+    },
+    {
+      "name": "zod",
+      "category": "State & routing",
+      "peerRange": "^3.25.0 || ^4.0.0",
+      "versions": [
+        "3.25.76",
+        "4.6.7"
+      ],
+      "packages": [
+        "@warpstate/core",
+        "@warpstate/playwright"
+      ]
+    },
+    {
+      "name": "vite",
+      "category": "Tooling",
+      "peerRange": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0",
+      "versions": [
+        "5.4.21",
+        "6.4.6",
+        "7.3.8",
+        "8.3.8"
+      ],
+      "packages": [
+        "@warpstate/vite"
+      ],
+      "why": "@warpstate/vite strips the runtime from production bundles; a resolver change in a Vite major would silently ship it."
+    },
+    {
+      "name": "@playwright/test",
+      "category": "Tooling",
+      "peerRange": "^1.40.0",
+      "versions": [
+        "1.40.1",
+        "1.65.1"
+      ],
+      "packages": [
+        "@warpstate/playwright"
+      ],
+      "why": "@warpstate/playwright injects snapshots (addInitScript) and waits for hydration."
+    }
+  ]
+}

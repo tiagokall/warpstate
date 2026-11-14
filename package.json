@@ -13,7 +13,8 @@
     "test": "pnpm -r --filter \"./packages/*\" test",
     "e2e": "pnpm --filter example-react-tanstack e2e",
     "changeset": "changeset",
-    "version-packages": "changeset version"
+    "version-packages": "changeset version",
+    "compat": "node compat/run.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
