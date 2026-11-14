@@ -1,0 +1,70 @@
+# --- Secrets & credentials (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+.npmrc
+.yarnrc
+.yarnrc.yml
+.netrc
+*.secret
+*.secrets
+secrets/
+.secrets/
+credentials*.json
+service-account*.json
+.aws/
+.gcloud/
+auth.json
+storageState.json
+**/playwright/.auth/
+
+# --- Dependencies ---
+node_modules/
+.pnpm-store/
+
+# --- Build output ---
+dist/
+build/
+out/
+*.tsbuildinfo
+.turbo/
+.vite/
+.cache/
+
+# --- Test output ---
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# --- Logs ---
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Editor / OS ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# --- Local tooling ---
+.claude/
+.gstack/
