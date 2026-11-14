@@ -5,24 +5,56 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "repository": { "type": "git", "url": "git+https://github.com/tiagokall/warpstate.git", "directory": "packages/zustand" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tiagokall/warpstate.git",
+    "directory": "packages/zustand"
+  },
   "homepage": "https://github.com/tiagokall/warpstate#readme",
-  "keywords": ["e2e", "testing", "snapshot", "state", "playwright", "react", "tanstack"],
+  "keywords": [
+    "e2e",
+    "testing",
+    "snapshot",
+    "state",
+    "playwright",
+    "react",
+    "tanstack"
+  ],
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./noop": { "types": "./dist/noop.d.ts", "import": "./dist/noop.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./noop": {
+      "types": "./dist/noop.d.ts",
+      "import": "./dist/noop.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
-  "dependencies": { "@warpstate/core": "workspace:^" },
-  "peerDependencies": { "zustand": "^4.0.0 || ^5.0.0" },
-  "peerDependenciesMeta": {},
-  "devDependencies": { "zustand": "^5.1.0", "zod": "^4.6.7" }
+  "dependencies": {
+    "@warpstate/core": "workspace:^"
+  },
+  "peerDependencies": {
+    "zustand": "^4.0.0 || ^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zustand": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "zustand": "^5.1.0",
+    "zod": "^4.6.7"
+  }
 }
