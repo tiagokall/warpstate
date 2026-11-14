@@ -33,6 +33,8 @@ export interface WarpGlobal {
   location?: () => string | undefined;
   /** Captures the current app state; available whenever the warpstate runtime is loaded. */
   capture?: (meta?: WarpSnapshot["meta"]) => WarpSnapshot;
+  /** Loads a snapshot (object, JSON or compact string) by queueing it and reloading the page. */
+  load?: (snapshot: unknown) => Promise<void>;
   /** @internal */
   _settle?: (error?: WarpGlobalError) => void;
 }

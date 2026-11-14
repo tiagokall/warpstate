@@ -4,6 +4,8 @@ import { getWarpGlobal } from "./global";
 import { safeParseSnapshot } from "./parse";
 import { WARP_FORMAT_VERSION, type WarpRouterState, type WarpSnapshot } from "./schema";
 import { findNonSerializable } from "./serializable";
+import { decodeSnapshot } from "./encoding";
+import { PENDING_STORAGE_KEY, takePendingSnapshot } from "./pending";
 import { captureStorage, restoreStorage, type StorageCaptureOptions } from "./storage";
 
 /**
@@ -155,7 +157,14 @@ export function getActiveSnapshot(): WarpSnapshot | null {
   rt.snapshot = null;
 
   const global = getWarpGlobal();
-  if (!global || global.snapshot == null) return null;
+  if (!global) return null;
+  if (global.snapshot == null) {
+    // Queued by loadSnapshot() (devtools, agents) right before a reload.
+    const pending = takePendingSnapshot();
+    if (pending === undefined) return null;
+    global.snapshot = pending;
+    global.status = "pending";
+  }
 
   if (isProductionEnv() && !rt.config.allowInProduction) {
     failWarp(
@@ -339,13 +348,34 @@ export function captureSnapshot(meta?: WarpSnapshot["meta"]): WarpSnapshot {
 }
 
 /**
+ * Validates a snapshot (object, JSON or compact `warp1.` string), queues it in
+ * sessionStorage and reloads the page so the app boots from it. This is how
+ * devtools and agents load a snapshot into an already running app.
+ */
+export async function loadSnapshot(
+  input: unknown,
+  options: { reload?: boolean } = {},
+): Promise<WarpSnapshot> {
+  const snapshot = await decodeSnapshot(input, { source: "loadSnapshot" });
+  if (isProductionEnv() && !runtime().config.allowInProduction) {
+    throw new WarpError("PRODUCTION_BLOCKED", "Loading snapshots is disabled in production builds.");
+  }
+  sessionStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(snapshot));
+  if (options.reload !== false) window.location.reload();
+  return snapshot;
+}
+
+/**
  * Wires `window.__WARPSTATE__.capture` and resolves the snapshot. Integrations call
  * this once at boot; it is safe to call more than once.
  */
 export function initWarp(config?: WarpConfig): WarpSnapshot | null {
   if (config) configureWarp(config);
   const global = getWarpGlobal();
-  if (global) global.capture = captureSnapshot;
+  if (global) {
+    global.capture = captureSnapshot;
+    global.load = (input) => loadSnapshot(input).then(() => undefined);
+  }
   return getActiveSnapshot();
 }
 

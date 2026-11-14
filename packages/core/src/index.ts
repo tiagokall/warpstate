@@ -27,6 +27,7 @@ export {
   markWarpReady,
   failWarp,
   captureSnapshot,
+  loadSnapshot,
   captureSnapshotWithReport,
   resetWarp,
   type WarpAdapter,
@@ -46,3 +47,6 @@ export { serializeSnapshot, snapshotFileName, downloadSnapshot, copySnapshot } f
 export { parseShortcut, matchesShortcut, type ParsedShortcut } from "./shortcut";
 
 export { defineAdapter } from "./runtime";
+export { createInitScript } from "./inject";
+export { PENDING_STORAGE_KEY } from "./pending";
+export { ENCODED_PREFIX, encodeSnapshot, decodeSnapshot, isEncodedSnapshot } from "./encoding";
