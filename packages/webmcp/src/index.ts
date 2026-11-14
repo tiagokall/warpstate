@@ -201,7 +201,9 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
           if (status === 404 || !body || !Array.isArray(body.scenarios)) return result({ error: NO_CATALOG_HINT }, true);
           return result({
             scenarios: body.scenarios,
-            next: `Call ${prefix}load with { "scenario": "<id>" } to open one.`,
+            next:
+              `Call ${prefix}load with { "scenario": "<id>" } to open one here. To show one to the user in ` +
+              "their own browser, give them this origin + the scenario's `link` (e.g. http://localhost:5173/?warp=<id>).",
           });
         } catch (error) {
           return errorResult(error);

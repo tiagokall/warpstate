@@ -18,12 +18,16 @@ const snapshot = (name: string, route: string) => ({
 
 let server: ViteDevServer;
 let base: string;
+let origin: string;
 
 beforeAll(async () => {
   const root = await mkdtemp(join(tmpdir(), "warpstate-catalog-"));
   await mkdir(join(root, "e2e/snapshots/nested"), { recursive: true });
   await mkdir(join(root, "node_modules/pkg"), { recursive: true });
-  await writeFile(join(root, "index.html"), "<!doctype html>");
+  await writeFile(
+    join(root, "index.html"),
+    '<!doctype html><html><head><title>t</title></head><body><script type="module" src="/main.js"></script></body></html>',
+  );
   await writeFile(join(root, "e2e/snapshots/cart.warp.json"), JSON.stringify(snapshot("Cart", "/cart")));
   await writeFile(join(root, "e2e/snapshots/promo.warp"), await encodeSnapshot(snapshot("Promo", "/promo") as never));
   await writeFile(join(root, "e2e/snapshots/broken.warp.json"), JSON.stringify({ warpstate: 1 }));
@@ -32,7 +36,8 @@ beforeAll(async () => {
 
   server = await createServer({ root, configFile: false, logLevel: "silent", plugins: [warpstate()], server: { port: 0 } });
   await server.listen();
-  base = `http://localhost:${(server.httpServer!.address() as AddressInfo).port}${SCENARIOS_ENDPOINT}`;
+  origin = `http://localhost:${(server.httpServer!.address() as AddressInfo).port}`;
+  base = origin + SCENARIOS_ENDPOINT;
 }, 30_000);
 
 afterAll(() => server?.close());
@@ -57,6 +62,7 @@ describe("dev-server scenario catalog", () => {
       restores: ["cart", "query"],
       app: { name: "shop", schemaVersion: "1" },
       file: "e2e/snapshots/cart.warp.json",
+      link: "/?warp=cart",
     });
     expect(scenarios.find((s) => s.id === "broken")?.error).toMatch(/router/);
   });
@@ -84,8 +90,46 @@ describe("dev-server scenario catalog", () => {
     }
   });
 
-  it("is only registered by the dev server", () => {
-    expect(typeof warpstate().configureServer).toBe("function");
-    expect(warpstate({ scenarios: false }).configureServer).toBeTypeOf("function");
+});
+
+/** Runs the inline <script> the dev server put in <head> against a fake window. */
+async function openLink(path: string) {
+  const html = await (await fetch(origin + path)).text();
+  const inline = /<head>\s*<script>([\s\S]*?)<\/script>/.exec(html)?.[1];
+  const storage = () => ({ removeItem() {}, setItem() {} });
+  const window: Record<string, unknown> = { localStorage: storage(), sessionStorage: storage() };
+  window.top = window;
+  const errors: string[] = [];
+  if (inline) new Function("window", "console", inline)(window, { error: (m: string) => errors.push(m) });
+  const global = window.__WARPSTATE__ as { snapshot?: { meta?: { name?: string } }; status?: string; error?: { message: string } } | undefined;
+  return { html, inline, global, errors };
+}
+
+describe("?warp= links", () => {
+  it("inline the scenario before the app's scripts, on any path", async () => {
+    for (const path of ["/?warp=cart", "/some/deep/route?x=1&warp=cart"]) {
+      const { html, global } = await openLink(path);
+      expect(html.indexOf("__WARPSTATE__")).toBeLessThan(html.indexOf('type="module" src="/main.js"'));
+      expect(global).toMatchObject({ status: "pending", snapshot: { meta: { name: "Cart" } } });
+    }
+  });
+
+  it("accept compact snapshots and nested ids", async () => {
+    const compact = await encodeSnapshot(snapshot("Inline", "/inline") as never);
+    expect((await openLink(`/?warp=${compact}`)).global?.snapshot?.meta?.name).toBe("Inline");
+    expect((await openLink("/?warp=nested%2Fcart")).global?.snapshot?.meta?.name).toBe("Other cart");
+  });
+
+  it("report unknown ids and invalid files in the page instead of booting a wrong state", async () => {
+    const unknown = await openLink("/?warp=nope");
+    expect(unknown.global).toMatchObject({ status: "error", error: { message: expect.stringContaining("Known ids: broken, cart") } });
+    expect(unknown.errors[0]).toMatch(/Unknown scenario "nope"/);
+    expect((await openLink("/?warp=broken")).global?.status).toBe("error");
+    expect((await openLink("/?warp=%3C%2Fscript%3E")).html).not.toContain('"</script>');
+  });
+
+  it("leave normal page loads untouched", async () => {
+    expect((await openLink("/")).inline).toBeUndefined();
+    expect((await openLink("/?other=1")).inline).toBeUndefined();
   });
 });

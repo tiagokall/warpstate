@@ -62,6 +62,29 @@ test.describe("opening scenarios with warp()", () => {
   });
 });
 
+test.describe("?warp= links (dev server)", () => {
+  test("a plain link opens the app in a scenario: no test fixture, no agent tooling", async ({ page }) => {
+    await page.goto("/?warp=checkout-review");
+    await expect(page.getByTestId("ship-to")).toHaveText("Ship to Ada Lovelace, 12 Analytical Row, London");
+    await expect.poll(() => page.evaluate(() => window.__WARPSTATE__?.status)).toBe("ready");
+    expect(await warpLocation(page)).toBe("/checkout?step=review");
+    expect(await apiCalls(page)).toEqual([]);
+
+    // Reloading the link resets the screen to the same state.
+    await page.getByRole("button", { name: "Back" }).click();
+    await page.reload();
+    await expect(page.getByTestId("ship-to")).toBeVisible();
+  });
+
+  test("an unknown id says which ones exist and the app still boots", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+    await page.goto("/?warp=nope");
+    await expect(page.getByRole("heading", { name: "Welcome to Warp Shop" })).toBeVisible();
+    expect(errors.join("\n")).toContain('Unknown scenario "nope" in ?warp=. Known ids: cart-with-coupon, checkout-review, search-results.');
+  });
+});
+
 test.describe("safety nets", () => {
   test("obsolete snapshots are rejected with a clear error", async ({ warp }) => {
     const snapshot = await readSnapshot("cart-with-coupon");
