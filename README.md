@@ -251,8 +251,9 @@ Then wait until `window.__WARPSTATE__.status` is `"ready"` (or `"error"`, with d
 | Tool | What it does |
 | --- | --- |
 | `warpstate_status` | Hydration status, current route, registered adapters, warnings. Read-only. |
+| `warpstate_list_scenarios` | The project's saved scenarios: id, name, description, route, history length and what each restores. Read-only. Needs `@warpstate/vite` (see below). |
 | `warpstate_capture` | Captures the current state. `format: "auto"` (default) returns JSON for small snapshots and the compact string when it is cheaper in tokens. Read-only. |
-| `warpstate_load` | Validates a snapshot, queues it and reloads the page into it. |
+| `warpstate_load` | `{ scenario: "<id>" }` or `{ snapshot }`: validates it, queues it and reloads the page into it. |
 
 ```ts
 import { registerWarpTools } from "@warpstate/webmcp";
@@ -261,7 +262,41 @@ registerWarpTools(); // no-op in production or when WebMCP is unavailable
 
 It uses `document.modelContext` (current spec) and falls back to `navigator.modelContext` (older Chrome builds, the MCP-B polyfill).
 
-**Validated against Chrome's real WebMCP implementation** (Chrome 157 stable and Chromium 159). A [Playwright suite](examples/react-tanstack/e2e/webmcp/webmcp.spec.ts) launches Chrome with WebMCP enabled and plays the browser agent through the DevTools Protocol `WebMCP` domain (`toolsAdded`, `invokeTool`, `toolResponded`). It checks that the tools register with their schemas and annotations, that status and capture return results, and that `warpstate_load` reloads the page into a scenario whose new document registers fresh tools. An invalid snapshot comes back as a tool error. It runs in CI on every push.
+### How an agent finds and uses scenarios
+
+An agent never has to know where the snapshot files are, or paste one into the conversation. In dev, the `warpstate()` Vite plugin serves a **read-only catalog** of every `*.warp.json` / `*.warp` file in the project:
+
+```
+GET /__warpstate/scenarios        → { scenarios: [{ id, name, description, route, historyLength, restores, file }] }
+GET /__warpstate/scenarios/:id    → the snapshot
+```
+
+The tools describe the workflow themselves, so a capable agent follows it without extra prompting: `warpstate_status` points to `warpstate_list_scenarios`, and the list result says to call `warpstate_load({ scenario: id })`. A session looks like this:
+
+```text
+agent → warpstate_list_scenarios
+      ← [{ id: "cart-with-coupon", name: "Cart with coupon",
+           description: "2 mugs + 1 tee, WARP10 applied; history: home → products → mug → cart",
+           route: "/cart", historyLength: 4, restores: ["cart", "checkout", "query"] }, …]
+agent → warpstate_load { scenario: "cart-with-coupon" }   // page reloads into the cart, no clicks
+agent → warpstate_status                                  // { status: "ready", location: "/cart" }
+```
+
+`meta.name` and `meta.description` are what the agent reads to pick a scenario, so write them for that reader (the capture prompt and `captureWarp(page, { name, description })` both set them).
+
+Safety: the catalog exists only in `vite dev` (never in a build or `vite preview`), it is read-only, and it serves only files found by its scan. Ids are not paths: `../../package.json` is just an unknown id. Scope the scan with `warpstate({ scenarios: ["e2e/snapshots"] })` or turn it off with `scenarios: false`. Unknown ids come back as a tool error listing the known ones. Without the plugin, `warpstate_list_scenarios` says how to add it.
+
+For coding agents that read the repo rather than the browser (Claude Code, Cursor, Codex), a few lines in `AGENTS.md` / `CLAUDE.md` do the same job:
+
+```md
+## App states (warpstate)
+- Saved app states live in `e2e/snapshots/*.warp.json`; `meta.description` says what each one is.
+- In the browser (dev server + WebMCP): `warpstate_list_scenarios`, then `warpstate_load { scenario: "<id>" }`.
+- In Playwright tests: `await warp("e2e/snapshots/<id>.warp.json")` from `@warpstate/playwright`.
+- To add a state, reach it in the app and call `warpstate_capture`, or press Ctrl+Shift+S, then save it as `e2e/snapshots/<id>.warp.json`.
+```
+
+**Validated against Chrome's real WebMCP implementation** (Chrome 157 stable and Chromium 159). A [Playwright suite](examples/react-tanstack/e2e/webmcp/webmcp.spec.ts) launches Chrome with WebMCP enabled and plays the browser agent through the DevTools Protocol `WebMCP` domain (`toolsAdded`, `invokeTool`, `toolResponded`). It checks that the tools register with their schemas and annotations, that status and capture return results, that an agent can list the project's scenarios and open one by id, and that `warpstate_load` reloads the page into a scenario whose new document registers fresh tools. An invalid snapshot comes back as a tool error. It runs in CI on every push.
 
 To try it yourself, enable `chrome://flags/#enable-webmcp-testing` (or launch Chromium with `--enable-features=WebMCP`). Then run the example and check `await document.modelContext.getTools()` in the console. [`e2e/webmcp/agent.ts`](examples/react-tanstack/e2e/webmcp/agent.ts) is a ~100-line CDP client you can reuse to drive any page's WebMCP tools from Playwright. Agents that drive the page another way, such as Playwright MCP or DevTools, can use the same operations on the global:
 
@@ -328,8 +363,8 @@ Snapshots from another `app.name` are rejected with `APP_MISMATCH`.
 | `@warpstate/tanstack-query` | `queryAdapter(queryClient, { compact, freshen, freeze, dehydrate, hydrate })` |
 | `@warpstate/zustand` | `zustandAdapter(name, store, { partialize, merge })` |
 | `@warpstate/playwright` | `test` / `expect` with a `warp` fixture, `warpFixtures`, `warp(page, input, { url, timeout, waitForReady })`, `waitForWarp`, `captureWarp`, `saveSnapshot`, `loadSnapshotInput`, `warpLocation` |
-| `@warpstate/webmcp` | `registerWarpTools({ signal, prefix, allowLoad })`, `getModelContext` |
-| `@warpstate/vite` | `warpstate({ keepInProduction, extraPackages })` |
+| `@warpstate/webmcp` | `registerWarpTools({ signal, prefix, allowLoad, debugging, scenariosEndpoint })`, `getModelContext`, `estimateTokens` |
+| `@warpstate/vite` | `warpstate({ keepInProduction, extraPackages, scenarios })`, `loadCatalog`, `SCENARIOS_ENDPOINT` |
 
 `createWarpRouter`'s `warp` option accepts `adapters`, `app`, `migrate`, `allowInProduction`, `strict` and `captureStorage`.
 

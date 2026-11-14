@@ -45,6 +45,24 @@ export interface WarpToolsOptions {
    * Default: `false`, so agents see the tools (they only exist in dev builds).
    */
   debugging?: boolean;
+  /**
+   * Where the dev server serves the scenario catalog (`@warpstate/vite` serves
+   * it at `/__warpstate/scenarios`). `false` drops the list tool and loading by id.
+   */
+  scenariosEndpoint?: string | false;
+}
+
+/** Default catalog endpoint, kept in sync with `@warpstate/vite`. */
+export const DEFAULT_SCENARIOS_ENDPOINT = "/__warpstate/scenarios";
+
+const NO_CATALOG_HINT =
+  "No scenario catalog on this server. Add the warpstate() plugin from @warpstate/vite to vite.config " +
+  "(it serves *.warp.json files from the project in dev), or pass a snapshot directly.";
+
+async function fetchCatalog(url: string): Promise<{ status: number; body: Record<string, unknown> | null }> {
+  const response = await fetch(url, { headers: { accept: "application/json" } });
+  const isJson = response.headers.get("content-type")?.includes("application/json");
+  return { status: response.status, body: isJson ? ((await response.json()) as Record<string, unknown>) : null };
 }
 
 /** `document.modelContext` (current spec) or `navigator.modelContext` (older builds, MCP-B polyfill). */
@@ -82,8 +100,9 @@ function errorResult(error: unknown) {
  * capture and load warpstate snapshots:
  *
  * - `warpstate_status`: hydration status, current route, registered adapters.
- * - `warpstate_capture`: the current state as a snapshot (compact by default).
- * - `warpstate_load`: boots the app from a snapshot (reloads the page).
+ * - `warpstate_list_scenarios`: the project's saved scenarios (needs `@warpstate/vite`).
+ * - `warpstate_capture`: the current state as a snapshot.
+ * - `warpstate_load`: boots the app from a scenario id or a snapshot (reloads the page).
  *
  * Does nothing in production builds or when the browser has no WebMCP support.
  * Returns a function that unregisters the tools.
@@ -100,6 +119,8 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
   initWarp();
   const prefix = options.prefix ?? "warpstate_";
   const debugging = options.debugging ?? false;
+  const endpoint =
+    options.scenariosEndpoint === false ? null : (options.scenariosEndpoint ?? DEFAULT_SCENARIOS_ENDPOINT).replace(/\/+$/, "");
 
   const tools: WebMcpTool[] = [
     {
@@ -107,7 +128,8 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
       title: "warpstate status",
       description:
         "Reports whether this app was booted from a warpstate snapshot, its hydration status, " +
-        "the current route and which state adapters (router, query cache, stores) are registered.",
+        "the current route and which state adapters (router, query cache, stores) are registered." +
+        (endpoint ? ` To jump to a known app state, call ${prefix}list_scenarios and then ${prefix}load with a scenario id.` : ""),
       inputSchema: { type: "object", properties: {} },
       annotations: { readOnlyHint: true, debugging },
       execute: async () => {
@@ -163,28 +185,68 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
     },
   ];
 
+  if (endpoint) {
+    tools.splice(1, 0, {
+      name: `${prefix}list_scenarios`,
+      title: "List warpstate scenarios",
+      description:
+        "Lists the saved app states (scenarios) checked into this project: id, name, description, the route " +
+        `it opens on and what it restores. Use it before testing or debugging a screen: ${prefix}load with ` +
+        "{ scenario: id } opens the app directly in that state, instead of clicking through the UI to get there.",
+      inputSchema: { type: "object", properties: {} },
+      annotations: { readOnlyHint: true, debugging },
+      execute: async () => {
+        try {
+          const { status, body } = await fetchCatalog(endpoint);
+          if (status === 404 || !body || !Array.isArray(body.scenarios)) return result({ error: NO_CATALOG_HINT }, true);
+          return result({
+            scenarios: body.scenarios,
+            next: `Call ${prefix}load with { "scenario": "<id>" } to open one.`,
+          });
+        } catch (error) {
+          return errorResult(error);
+        }
+      },
+    });
+  }
+
   if (options.allowLoad !== false) {
     tools.push({
       name: `${prefix}load`,
       title: "Load warpstate snapshot",
       description:
-        "Reloads the app directly into the state described by a warpstate snapshot (a 'warp1.' string, " +
+        "Reloads the app directly into a saved state. Pass either `scenario` (an id from " +
+        `${prefix}list_scenarios) or \`snapshot\` (one returned by ${prefix}capture: a 'warp1.' string, ` +
         "a JSON string or a snapshot object). Unsaved state in the page is lost. " +
-        "Call the status tool afterwards to confirm it reached 'ready'.",
+        `Call ${prefix}status afterwards to confirm it reached 'ready'.`,
       inputSchema: {
         type: "object",
         properties: {
+          ...(endpoint ? { scenario: { type: "string", description: "Scenario id from the list tool." } } : {}),
           snapshot: {
             description: "A compact 'warp1.' string, a JSON string or a snapshot object.",
             anyOf: [{ type: "string" }, { type: "object" }],
           },
         },
-        required: ["snapshot"],
+        // No top-level oneOf: several model APIs reject it in tool schemas. Checked in execute().
+        ...(endpoint ? {} : { required: ["snapshot"] }),
       },
       annotations: { consequentialHint: true, debugging },
       execute: async (input) => {
         try {
-          const snapshot = await decodeSnapshot(input.snapshot, { source: "warpstate_load" });
+          let source: unknown = input.snapshot;
+          if (typeof input.scenario === "string") {
+            if (!endpoint) throw new Error("Loading by scenario id is disabled (scenariosEndpoint: false).");
+            const { status, body } = await fetchCatalog(`${endpoint}/${encodeURIComponent(input.scenario)}`);
+            if (status !== 200 || !body) {
+              const known = body && Array.isArray(body.available) ? ` Known ids: ${body.available.join(", ")}.` : "";
+              throw new Error(body?.error ? `${String(body.error)}${known}` : NO_CATALOG_HINT);
+            }
+            source = body;
+          } else if (source === undefined) {
+            throw new Error(`Pass { scenario: "<id>" } (see ${prefix}list_scenarios) or { snapshot }.`);
+          }
+          const snapshot = await decodeSnapshot(source, { source: typeof input.scenario === "string" ? `scenario "${input.scenario}"` : "warpstate_load" });
           await loadSnapshot(snapshot, { reload: false });
           // Let the tool result reach the agent before the page goes away.
           setTimeout(() => window.location.reload(), 50);

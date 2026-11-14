@@ -41,10 +41,10 @@ afterEach(() => {
 });
 
 describe("registerWarpTools", () => {
-  it("registers status, capture and load", () => {
+  it("registers status, list_scenarios, capture and load", () => {
     const ctx = fakeModelContext();
     registerWarpTools({ modelContext: ctx });
-    expect([...ctx.tools.keys()]).toEqual(["warpstate_status", "warpstate_capture", "warpstate_load"]);
+    expect([...ctx.tools.keys()]).toEqual(["warpstate_status", "warpstate_list_scenarios", "warpstate_capture", "warpstate_load"]);
     expect(ctx.tools.get("warpstate_capture")!.annotations).toMatchObject({ readOnlyHint: true });
     expect(ctx.tools.get("warpstate_load")!.annotations).toMatchObject({ consequentialHint: true });
   });
@@ -63,7 +63,7 @@ describe("registerWarpTools", () => {
     const ctx = fakeModelContext();
     (document as { modelContext?: unknown }).modelContext = ctx;
     registerWarpTools();
-    expect(ctx.registerTool).toHaveBeenCalledTimes(3);
+    expect(ctx.registerTool).toHaveBeenCalledTimes(4);
   });
 
   it("is a no-op without WebMCP support", () => {
@@ -77,7 +77,7 @@ describe("registerWarpTools", () => {
 
     const controller = new AbortController();
     registerWarpTools({ modelContext: ctx, signal: controller.signal, allowLoad: false });
-    expect(ctx.tools.size).toBe(2);
+    expect(ctx.tools.size).toBe(3);
     controller.abort();
     expect(ctx.tools.size).toBe(0);
   });
@@ -143,5 +143,87 @@ describe("registerWarpTools", () => {
     expect(out.isError).toBe(true);
     expect(String(out.structuredContent.error)).toMatch(/not a valid compact/);
     expect(sessionStorage.getItem(PENDING_STORAGE_KEY)).toBeNull();
+  });
+});
+
+describe("scenario catalog", () => {
+  const promo = { warpstate: 1, meta: { name: "promo" }, router: { entries: ["/promo"], index: 0 } };
+  const json = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+
+  function mockCatalog() {
+    return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === "/__warpstate/scenarios") return json(200, { scenarios: [{ id: "promo", name: "promo", route: "/promo" }] });
+      if (url === "/__warpstate/scenarios/promo") return json(200, promo);
+      return json(404, { error: `Unknown scenario "${decodeURIComponent(url.split("/").pop()!)}".`, available: ["promo"] });
+    });
+  }
+
+  it("tells agents to list first and load by id", () => {
+    const ctx = fakeModelContext();
+    registerWarpTools({ modelContext: ctx });
+    expect(ctx.tools.get("warpstate_status")!.description).toMatch(/warpstate_list_scenarios.*warpstate_load/);
+    expect(ctx.tools.get("warpstate_load")!.description).toMatch(/scenario/);
+    expect(ctx.tools.get("warpstate_list_scenarios")!.annotations).toMatchObject({ readOnlyHint: true });
+    // Several model APIs reject top-level oneOf/anyOf in tool input schemas.
+    for (const tool of ctx.tools.values()) {
+      expect(Object.keys(tool.inputSchema ?? {})).not.toEqual(expect.arrayContaining(["oneOf"]));
+    }
+  });
+
+  it("lists the scenarios served by the dev server", async () => {
+    mockCatalog();
+    const ctx = fakeModelContext();
+    registerWarpTools({ modelContext: ctx });
+    const out = await call(ctx, "warpstate_list_scenarios");
+    expect(out.structuredContent.scenarios).toEqual([{ id: "promo", name: "promo", route: "/promo" }]);
+    expect(out.structuredContent.next).toMatch(/warpstate_load/);
+  });
+
+  it("explains how to enable the catalog when the server has none", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("<!doctype html>", { status: 200, headers: { "content-type": "text/html" } }));
+    const ctx = fakeModelContext();
+    registerWarpTools({ modelContext: ctx });
+    const out = await call(ctx, "warpstate_list_scenarios");
+    expect(out.isError).toBe(true);
+    expect(String(out.structuredContent.error)).toMatch(/@warpstate\/vite/);
+  });
+
+  it("loads a scenario by id", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(window, "location", "get").mockReturnValue({ ...window.location, reload: vi.fn() } as Location);
+    mockCatalog();
+    const ctx = fakeModelContext();
+    registerWarpTools({ modelContext: ctx });
+    const out = await call(ctx, "warpstate_load", { scenario: "promo" });
+    expect(out.structuredContent).toEqual({ loading: "promo", reloading: true });
+    expect(JSON.parse(sessionStorage.getItem(PENDING_STORAGE_KEY)!)).toEqual(promo);
+  });
+
+  it("lists the known ids when the scenario does not exist", async () => {
+    const fetchMock = mockCatalog();
+    const ctx = fakeModelContext();
+    registerWarpTools({ modelContext: ctx });
+    const out = await call(ctx, "warpstate_load", { scenario: "../secret" });
+    expect(fetchMock).toHaveBeenCalledWith("/__warpstate/scenarios/..%2Fsecret", expect.anything());
+    expect(out.isError).toBe(true);
+    expect(String(out.structuredContent.error)).toBe('Unknown scenario "../secret". Known ids: promo.');
+    expect(sessionStorage.getItem(PENDING_STORAGE_KEY)).toBeNull();
+  });
+
+  it("requires a scenario or a snapshot", async () => {
+    const ctx = fakeModelContext();
+    registerWarpTools({ modelContext: ctx });
+    const out = await call(ctx, "warpstate_load", {});
+    expect(out.isError).toBe(true);
+    expect(String(out.structuredContent.error)).toMatch(/scenario.*snapshot/);
+  });
+
+  it("can be turned off", () => {
+    const ctx = fakeModelContext();
+    registerWarpTools({ modelContext: ctx, scenariosEndpoint: false });
+    expect(ctx.tools.has("warpstate_list_scenarios")).toBe(false);
+    expect(ctx.tools.get("warpstate_load")!.inputSchema).toMatchObject({ required: ["snapshot"] });
   });
 });

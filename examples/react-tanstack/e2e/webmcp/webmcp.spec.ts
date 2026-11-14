@@ -8,7 +8,7 @@ import { decodeSnapshot, encodeSnapshot, type WarpSnapshot } from "@warpstate/co
 import { expect, test } from "@playwright/test";
 import { WebMcpAgent, structured } from "./agent";
 
-const TOOLS = ["warpstate_status", "warpstate_capture", "warpstate_load"];
+const TOOLS = ["warpstate_status", "warpstate_list_scenarios", "warpstate_capture", "warpstate_load"];
 const readSnapshot = async (name: string): Promise<WarpSnapshot> =>
   JSON.parse(await readFile(`e2e/snapshots/${name}.warp.json`, "utf8"));
 
@@ -23,14 +23,17 @@ test.beforeEach(async ({ page }) => {
 test("the app registers its tools with the browser, with schemas and annotations", async ({ page }) => {
   const agent = await WebMcpAgent.attach(page);
   await page.reload();
-  const [status, capture, load] = await agent.waitForTools(TOOLS);
+  const [status, list, capture, load] = await agent.waitForTools(TOOLS);
 
   // Not marked `debugging`, so agents list them as regular tools
   // (Chrome DevTools MCP hides debugging tools from list_webmcp_tools).
   expect(status!.annotations).toMatchObject({ readOnly: true, debugging: false });
+  expect(list!.annotations).toMatchObject({ readOnly: true, debugging: false });
   expect(capture!.annotations).toMatchObject({ readOnly: true, debugging: false });
   expect(load!.annotations).toMatchObject({ readOnly: false, consequential: true, debugging: false });
-  expect(load!.inputSchema).toMatchObject({ required: ["snapshot"] });
+  expect(load!.inputSchema).toMatchObject({ properties: { scenario: { type: "string" } } });
+  // The descriptions are what teaches an agent the workflow.
+  expect(status!.description).toMatch(/warpstate_list_scenarios.*warpstate_load/);
 
   // The page sees the same registry through the spec API.
   const names = await page.evaluate(async () => {
@@ -92,6 +95,40 @@ test("an agent loads a scenario: the page reloads into it and re-registers its t
   // And the restored app is fully usable.
   await page.getByRole("button", { name: "Place order" }).click();
   await expect(page.getByTestId("order-id")).toHaveText("Order WS-1019 confirmed.");
+});
+
+test("an agent discovers the project's scenarios and opens one by id", async ({ page }) => {
+  const agent = await WebMcpAgent.attach(page);
+  await page.reload();
+  await agent.waitForTools(TOOLS);
+
+  const listed = structured(await agent.invoke("warpstate_list_scenarios"));
+  const scenarios = listed.scenarios as Array<Record<string, unknown>>;
+  expect(scenarios.map((s) => s.id)).toEqual(["cart-with-coupon", "checkout-review", "search-results"]);
+  expect(scenarios.find((s) => s.id === "cart-with-coupon")).toMatchObject({
+    name: "Cart with coupon",
+    description: expect.stringContaining("WARP10"),
+    route: "/cart",
+    historyLength: 4,
+    restores: ["cart", "checkout", "query"],
+  });
+
+  const reloaded = page.waitForEvent("load");
+  expect(structured(await agent.invoke("warpstate_load", { scenario: "cart-with-coupon" }))).toEqual({
+    loading: "Cart with coupon",
+    reloading: true,
+  });
+  agent.forgetTools();
+  await reloaded;
+  await expect(page.getByTestId("coupon")).toHaveText("Coupon WARP10 applied");
+  await expect(page.getByTestId("total")).toHaveText("$47.7");
+
+  // Unknown ids fail without touching the page and tell the agent what exists.
+  await agent.waitForTools(TOOLS);
+  const unknown = structured(await agent.invoke("warpstate_load", { scenario: "../../package.json" }));
+  expect(unknown.error).toBe(
+    'Unknown scenario "../../package.json". Known ids: cart-with-coupon, checkout-review, search-results.',
+  );
 });
 
 test("invalid snapshots come back as tool errors and leave the page alone", async ({ page }) => {
