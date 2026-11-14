@@ -1,4 +1,7 @@
 import type { Plugin } from "vite";
+import { SCENARIOS_ENDPOINT, loadCatalog } from "./scenarios";
+
+export { SCENARIOS_ENDPOINT, findScenarioFiles, loadCatalog, type ScenarioSummary } from "./scenarios";
 
 /** Browser-side packages that ship a `/noop` entry. */
 export const RUNTIME_PACKAGES = [
@@ -19,6 +22,14 @@ export interface WarpstatePluginOptions {
   keepInProduction?: boolean;
   /** Extra package names that expose a `/noop` entry (e.g. your own adapters). */
   extraPackages?: string[];
+  /**
+   * Folders (relative to the Vite root) searched for `*.warp.json` / `*.warp`
+   * scenario files. In `vite dev` they are served as a read-only catalog at
+   * `/__warpstate/scenarios`, which agents use to discover and load scenarios
+   * by id. `false` disables the catalog. Default: the whole project root,
+   * skipping node_modules, dist and dot-folders.
+   */
+  scenarios?: string[] | false;
 }
 
 /**
@@ -40,6 +51,33 @@ export function warpstate(options: WarpstatePluginOptions = {}): Plugin {
       // follows NODE_ENV. Stripping too often is safe; shipping the runtime is not.
       const production = config.mode === "production" || config.isProduction;
       strip = config.command === "build" && production && !options.keepInProduction;
+    },
+    configureServer(server) {
+      if (options.scenarios === false) return;
+      const dirs = options.scenarios ?? ["."];
+      server.middlewares.use(SCENARIOS_ENDPOINT, (req, res, next) => {
+        if (req.method !== "GET") return next();
+        const send = (status: number, body: unknown) => {
+          res.statusCode = status;
+          res.setHeader("content-type", "application/json");
+          res.setHeader("cache-control", "no-store");
+          res.end(JSON.stringify(body));
+        };
+        void (async () => {
+          // Re-read on every request so new or edited scenarios show up immediately.
+          const catalog = await loadCatalog(server.config.root, dirs);
+          const id = decodeURIComponent((req.url ?? "/").split("?")[0]!.replace(/^\/+|\/+$/g, ""));
+          if (!id) return send(200, { scenarios: [...catalog.values()].map((entry) => entry.summary) });
+          // Only ids from the scan are served, never arbitrary paths.
+          const entry = catalog.get(id);
+          if (!entry) return send(404, { error: `Unknown scenario "${id}".`, available: [...catalog.keys()] });
+          try {
+            send(200, await entry.load());
+          } catch (error) {
+            send(422, { error: error instanceof Error ? error.message : String(error) });
+          }
+        })().catch(next);
+      });
     },
     async resolveId(source, importer, resolveOptions) {
       if (!strip || !packages.has(source)) return null;
