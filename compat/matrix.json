@@ -1,5 +1,5 @@
 {
-  "$comment": "Compatibility matrix. Each case pins one library (via pnpm overrides) and runs the listed packages' typecheck + unit tests; `e2e: true` also runs the example's Playwright suite. Add a version or a library here and run `pnpm compat`.",
+  "$comment": "Compatibility matrix. Each case pins one library (via pnpm overrides) and runs the listed packages' typecheck + unit tests; `e2e: true` also runs the example's Playwright suite. Add a version or a library here and run `pnpm compat`. `unitOnly: { version: reason }` skips the e2e stage for that version and says why.",
   "libraries": [
     {
       "name": "react",
@@ -34,7 +34,11 @@
       ],
       "e2e": true,
       "companions": {
-        "@tanstack/router-plugin": "$version?"
+        "@tanstack/router-plugin": "$version?",
+        "@tanstack/router-generator": "$version?"
+      },
+      "unitOnly": {
+        "1.120.20": "the example's build tooling (router-plugin ≤ 1.120 exports TanStackRouterVite) predates its vite.config.ts"
       }
     },
     {
@@ -43,7 +47,7 @@
       "peerRange": "^5.0.0",
       "versions": [
         "5.0.5",
-        "5.60.0",
+        "5.60.5",
         "5.107.1"
       ],
       "packages": [

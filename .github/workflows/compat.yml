@@ -1,0 +1,52 @@
+name: Compatibility
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "compat/**"
+      - "packages/*/package.json"
+      - ".github/workflows/compat.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      cases: ${{ steps.list.outputs.cases }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: echo "cases=$(node compat/run.mjs --list)" >> "$GITHUB_OUTPUT"
+
+  case:
+    needs: plan
+    name: ${{ matrix.case.id }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        case: ${{ fromJson(needs.plan.outputs.cases) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install Playwright Chromium
+        if: matrix.case.e2e
+        run: pnpm install --frozen-lockfile && pnpm --filter example-react-tanstack exec playwright install --with-deps chromium
+      - name: Run ${{ matrix.case.id }}
+        run: node compat/run.mjs "${{ matrix.case.id }}"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: compat-log-${{ strategy.job-index }}
+          path: compat/logs
+          retention-days: 7

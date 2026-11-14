@@ -68,3 +68,4 @@ Thumbs.db
 # --- Local tooling ---
 .claude/
 .gstack/
+compat/logs/

@@ -2,8 +2,128 @@
   "zustand@5.1.0": {
     "status": "pass",
     "stage": "done",
-    "durationS": 28,
+    "durationS": 25,
     "resolved": "5.1.0",
+    "date": "2026-11-14"
+  },
+  "react@18.3.1": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 56,
+    "resolved": "18.3.1",
+    "date": "2026-11-14"
+  },
+  "react@19.3.1": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 80,
+    "resolved": "19.3.1",
+    "date": "2026-11-14"
+  },
+  "@tanstack/react-router@1.120.20": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 22,
+    "resolved": "1.120.20",
+    "unitOnly": "the example's build tooling (router-plugin ≤ 1.120 exports TanStackRouterVite) predates its vite.config.ts",
+    "date": "2026-11-14"
+  },
+  "@tanstack/react-router@1.140.0": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 65,
+    "resolved": "1.140.0",
+    "date": "2026-11-14"
+  },
+  "@tanstack/react-router@1.170.46": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 60,
+    "resolved": "1.170.46",
+    "date": "2026-11-14"
+  },
+  "@tanstack/query-core@5.0.5": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 29,
+    "resolved": "5.0.5",
+    "date": "2026-11-14"
+  },
+  "@tanstack/query-core@5.107.1": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 29,
+    "resolved": "5.107.1",
+    "date": "2026-11-14"
+  },
+  "zustand@4.5.7": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 28,
+    "resolved": "4.5.7",
+    "date": "2026-11-14"
+  },
+  "zod@3.25.76": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 31,
+    "resolved": "3.25.76",
+    "date": "2026-11-14"
+  },
+  "zod@4.6.7": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 33,
+    "resolved": "4.6.7",
+    "date": "2026-11-14"
+  },
+  "vite@5.4.21": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 29,
+    "resolved": "5.4.21",
+    "date": "2026-11-14"
+  },
+  "vite@6.4.6": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 29,
+    "resolved": "6.4.6",
+    "date": "2026-11-14"
+  },
+  "vite@7.3.8": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 25,
+    "resolved": "7.3.8",
+    "date": "2026-11-14"
+  },
+  "vite@8.3.8": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 26,
+    "resolved": "8.3.8",
+    "date": "2026-11-14"
+  },
+  "@playwright/test@1.40.1": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 28,
+    "resolved": "1.40.1",
+    "date": "2026-11-14"
+  },
+  "@playwright/test@1.65.1": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 28,
+    "resolved": "1.65.1",
+    "date": "2026-11-14"
+  },
+  "@tanstack/query-core@5.60.5": {
+    "status": "pass",
+    "stage": "done",
+    "durationS": 18,
+    "resolved": "5.60.5",
     "date": "2026-11-14"
   }
 }

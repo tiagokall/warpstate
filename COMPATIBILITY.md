@@ -10,29 +10,31 @@ packages that depend on it. Rows marked **e2e** also run the example app's Playw
 
 | Library | Declared peer range | Version | Result | Checked | Covers |
 | --- | --- | --- | --- | --- | --- |
-| `react` | `^18.0.0 \|\| ^19.0.0` | 18.3.1 | — | — | @warpstate/react, @warpstate/tanstack-router + **e2e** |
-| `react` | `^18.0.0 \|\| ^19.0.0` | 19.3.1 | — | — | @warpstate/react, @warpstate/tanstack-router + **e2e** |
-| `@tanstack/react-router` | `^1.120.0` | 1.120.20 | — | — | @warpstate/tanstack-router + **e2e** |
-| `@tanstack/react-router` | `^1.120.0` | 1.140.0 | — | — | @warpstate/tanstack-router + **e2e** |
-| `@tanstack/react-router` | `^1.120.0` | 1.170.46 | — | — | @warpstate/tanstack-router + **e2e** |
-| `@tanstack/query-core` | `^5.0.0` | 5.0.5 | — | — | @warpstate/tanstack-query |
-| `@tanstack/query-core` | `^5.0.0` | 5.60.0 | — | — | @warpstate/tanstack-query |
-| `@tanstack/query-core` | `^5.0.0` | 5.107.1 | — | — | @warpstate/tanstack-query |
-| `zustand` | `^4.0.0 \|\| ^5.0.0` | 4.5.7 | — | — | @warpstate/zustand |
-| `zustand` | `^4.0.0 \|\| ^5.0.0` | 5.1.0 | — | — | @warpstate/zustand |
-| `zod` | `^3.25.0 \|\| ^4.0.0` | 3.25.76 | — | — | @warpstate/core, @warpstate/playwright |
-| `zod` | `^3.25.0 \|\| ^4.0.0` | 4.6.7 | — | — | @warpstate/core, @warpstate/playwright |
+| `react` | `^18.0.0 \|\| ^19.0.0` | 18.3.1 | ✅ | 2026-11-14 | @warpstate/react, @warpstate/tanstack-router + **e2e** |
+| `react` | `^18.0.0 \|\| ^19.0.0` | 19.3.1 | ✅ | 2026-11-14 | @warpstate/react, @warpstate/tanstack-router + **e2e** |
+| `@tanstack/react-router` | `^1.120.0` | 1.120.20 | ✅ unit only¹ | 2026-11-14 | @warpstate/tanstack-router |
+| `@tanstack/react-router` | `^1.120.0` | 1.140.0 | ✅ | 2026-11-14 | @warpstate/tanstack-router + **e2e** |
+| `@tanstack/react-router` | `^1.120.0` | 1.170.46 | ✅ | 2026-11-14 | @warpstate/tanstack-router + **e2e** |
+| `@tanstack/query-core` | `^5.0.0` | 5.0.5 | ✅ | 2026-11-14 | @warpstate/tanstack-query |
+| `@tanstack/query-core` | `^5.0.0` | 5.60.5 | ✅ | 2026-11-14 | @warpstate/tanstack-query |
+| `@tanstack/query-core` | `^5.0.0` | 5.107.1 | ✅ | 2026-11-14 | @warpstate/tanstack-query |
+| `zustand` | `^4.0.0 \|\| ^5.0.0` | 4.5.7 | ✅ | 2026-11-14 | @warpstate/zustand |
+| `zustand` | `^4.0.0 \|\| ^5.0.0` | 5.1.0 | ✅ | 2026-11-14 | @warpstate/zustand |
+| `zod` | `^3.25.0 \|\| ^4.0.0` | 3.25.76 | ✅ | 2026-11-14 | @warpstate/core, @warpstate/playwright |
+| `zod` | `^3.25.0 \|\| ^4.0.0` | 4.6.7 | ✅ | 2026-11-14 | @warpstate/core, @warpstate/playwright |
+
+¹ `@tanstack/react-router@1.120.20`: e2e not run because the example's build tooling (router-plugin ≤ 1.120 exports TanStackRouterVite) predates its vite.config.ts.
 
 ## Tooling
 
 | Library | Declared peer range | Version | Result | Checked | Covers |
 | --- | --- | --- | --- | --- | --- |
-| `vite` | `^5.0.0 \|\| ^6.0.0 \|\| ^7.0.0 \|\| ^8.0.0` | 5.4.21 | — | — | @warpstate/vite |
-| `vite` | `^5.0.0 \|\| ^6.0.0 \|\| ^7.0.0 \|\| ^8.0.0` | 6.4.6 | — | — | @warpstate/vite |
-| `vite` | `^5.0.0 \|\| ^6.0.0 \|\| ^7.0.0 \|\| ^8.0.0` | 7.3.8 | — | — | @warpstate/vite |
-| `vite` | `^5.0.0 \|\| ^6.0.0 \|\| ^7.0.0 \|\| ^8.0.0` | 8.3.8 | — | — | @warpstate/vite |
-| `@playwright/test` | `^1.40.0` | 1.40.1 | — | — | @warpstate/playwright |
-| `@playwright/test` | `^1.40.0` | 1.65.1 | — | — | @warpstate/playwright |
+| `vite` | `^5.0.0 \|\| ^6.0.0 \|\| ^7.0.0 \|\| ^8.0.0` | 5.4.21 | ✅ | 2026-11-14 | @warpstate/vite |
+| `vite` | `^5.0.0 \|\| ^6.0.0 \|\| ^7.0.0 \|\| ^8.0.0` | 6.4.6 | ✅ | 2026-11-14 | @warpstate/vite |
+| `vite` | `^5.0.0 \|\| ^6.0.0 \|\| ^7.0.0 \|\| ^8.0.0` | 7.3.8 | ✅ | 2026-11-14 | @warpstate/vite |
+| `vite` | `^5.0.0 \|\| ^6.0.0 \|\| ^7.0.0 \|\| ^8.0.0` | 8.3.8 | ✅ | 2026-11-14 | @warpstate/vite |
+| `@playwright/test` | `^1.40.0` | 1.40.1 | ✅ | 2026-11-14 | @warpstate/playwright |
+| `@playwright/test` | `^1.40.0` | 1.65.1 | ✅ | 2026-11-14 | @warpstate/playwright |
 
 - `vite`: @warpstate/vite strips the runtime from production bundles; a resolver change in a Vite major would silently ship it.
 - `@playwright/test`: @warpstate/playwright injects snapshots (addInitScript) and waits for hydration.

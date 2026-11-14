@@ -13,7 +13,7 @@
  * COMPATIBILITY.md.
  */
 import { execSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -24,6 +24,15 @@ const results = existsSync(resultsPath) ? JSON.parse(readFileSync(resultsPath, "
 
 const args = process.argv.slice(2);
 const reportOnly = args.includes("--report");
+
+if (args.includes("--list")) {
+  // Used by CI to build its job matrix.
+  const cases = matrix.libraries.flatMap((lib) =>
+    lib.versions.map((version) => ({ id: `${lib.name}@${version}`, e2e: Boolean(lib.e2e && !lib.unitOnly?.[version]) })),
+  );
+  console.log(JSON.stringify(cases));
+  process.exit(0);
+}
 const filters = args.filter((a) => !a.startsWith("--"));
 
 function selected(lib, version) {
@@ -84,7 +93,9 @@ function runCase(lib, version) {
       ["typecheck", `pnpm ${testFilters} typecheck`],
       ["test", `pnpm ${testFilters} test`],
     ];
-    if (lib.e2e) {
+    const unitOnly = lib.unitOnly?.[version];
+    outcome.unitOnly = unitOnly;
+    if (lib.e2e && !unitOnly) {
       stages.push(["e2e-build", `pnpm --filter "example-react-tanstack..." build`]);
       stages.push(["e2e", "pnpm --filter example-react-tanstack exec playwright test"]);
     }
@@ -103,6 +114,9 @@ function runCase(lib, version) {
     const tail = log.join("\n").split("\n").filter(Boolean).slice(-40).join("\n");
     outcome.log = tail;
   } finally {
+    // Full log for debugging (compat/logs is gitignored).
+    mkdirSync(join(root, "compat/logs"), { recursive: true });
+    writeFileSync(join(root, "compat/logs", `${lib.name.replace(/[@/]/g, "_")}@${version}.log`), log.join("\n"));
     outcome.durationS = Math.round((Date.now() - started) / 1000);
     rmSync(dir, { recursive: true, force: true });
   }
@@ -127,13 +141,26 @@ function render() {
     for (const lib of matrix.libraries.filter((l) => (l.category ?? "Other") === category)) {
     for (const version of lib.versions) {
       const r = results[`${lib.name}@${version}`];
-      const cell = !r ? "—" : r.status === "pass" ? "✅" : r.status === "mismatch" ? `⚠️ got ${r.resolved}` : `❌ (${r.stage})`;
-      const covers = `${lib.packages.join(", ")}${lib.e2e ? " + **e2e**" : ""}`;
+      const unitOnly = lib.unitOnly?.[version];
+      const cell = !r
+        ? "—"
+        : r.status === "pass"
+          ? unitOnly && lib.e2e
+            ? "✅ unit only¹"
+            : "✅"
+          : r.status === "mismatch"
+            ? `⚠️ got ${r.resolved}`
+            : `❌ (${r.stage})`;
+      const covers = `${lib.packages.join(", ")}${lib.e2e && !unitOnly ? " + **e2e**" : ""}`;
       lines.push(`| \`${lib.name}\` | \`${lib.peerRange.replace(/\|/g, "\\|")}\` | ${version} | ${cell} | ${r?.date ?? "—"} | ${covers} |`);
     }
     }
     const notes = matrix.libraries.filter((l) => (l.category ?? "Other") === category && l.why);
     if (notes.length) lines.push("", ...notes.map((l) => `- \`${l.name}\`: ${l.why}`));
+    const unitNotes = matrix.libraries
+      .filter((l) => (l.category ?? "Other") === category)
+      .flatMap((l) => Object.entries(l.unitOnly ?? {}).map(([v, why]) => `¹ \`${l.name}@${v}\`: e2e not run because ${why}.`));
+    if (unitNotes.length) lines.push("", ...unitNotes);
     lines.push("");
   }
   lines.push(
