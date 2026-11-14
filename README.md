@@ -259,7 +259,11 @@ import { registerWarpTools } from "@warpstate/webmcp";
 registerWarpTools(); // no-op in production or when WebMCP is unavailable
 ```
 
-It uses `document.modelContext` (current spec) and falls back to `navigator.modelContext` (older Chrome builds, the MCP-B polyfill). Agents that drive the page another way, such as Playwright MCP or DevTools, can use the same operations on the global:
+It uses `document.modelContext` (current spec) and falls back to `navigator.modelContext` (older Chrome builds, the MCP-B polyfill).
+
+**Validated against Chrome's real WebMCP implementation** (Chrome 157 stable and Chromium 159). A [Playwright suite](examples/react-tanstack/e2e/webmcp/webmcp.spec.ts) launches Chrome with WebMCP enabled and plays the browser agent through the DevTools Protocol `WebMCP` domain (`toolsAdded`, `invokeTool`, `toolResponded`). It checks that the tools register with their schemas and annotations, that status and capture return results, and that `warpstate_load` reloads the page into a scenario whose new document registers fresh tools. An invalid snapshot comes back as a tool error. It runs in CI on every push.
+
+To try it yourself, enable `chrome://flags/#enable-webmcp-testing` (or launch Chromium with `--enable-features=WebMCP`). Then run the example and check `await document.modelContext.getTools()` in the console. [`e2e/webmcp/agent.ts`](examples/react-tanstack/e2e/webmcp/agent.ts) is a ~100-line CDP client you can reuse to drive any page's WebMCP tools from Playwright. Agents that drive the page another way, such as Playwright MCP or DevTools, can use the same operations on the global:
 
 ```js
 await window.__WARPSTATE__.capture({ name: "bug repro" }); // snapshot object

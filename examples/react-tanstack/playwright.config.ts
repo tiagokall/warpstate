@@ -20,7 +20,21 @@ export default defineConfig({
       ? { name: "record", testMatch: /record\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }
       : benchmarking
         ? { name: "bench", testMatch: /bench\.spec\.ts/, use: { ...devices["Desktop Chrome"] } }
-        : { name: "chromium", testIgnore: /(record|bench)\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+        : { name: "chromium", testIgnore: /(record|bench|webmcp)\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    // Real WebMCP: Chrome's own document.modelContext, driven over CDP like a browser agent.
+    ...(recording || benchmarking
+      ? []
+      : [
+          {
+            name: "webmcp",
+            testMatch: /webmcp\.spec\.ts/,
+            use: {
+              ...devices["Desktop Chrome"],
+              ...(process.env.WEBMCP_CHANNEL ? { channel: process.env.WEBMCP_CHANNEL } : {}),
+              launchOptions: { args: ["--enable-features=WebMCP"] },
+            },
+          },
+        ]),
   ],
   webServer: {
     command: `pnpm exec vite --port ${PORT} --strictPort`,

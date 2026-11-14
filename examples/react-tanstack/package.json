@@ -10,7 +10,9 @@
     "e2e": "playwright test",
     "record": "RECORD=1 playwright test --project=record",
     "check:prod": "vite build && node scripts/check-prod-bundle.mjs",
-    "bench": "BENCH=1 playwright test --project=bench"
+    "bench": "BENCH=1 playwright test --project=bench",
+    "e2e:webmcp": "playwright test --project=webmcp",
+    "e2e:webmcp:chrome": "WEBMCP_CHANNEL=chrome playwright test --project=webmcp"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.107.1",
