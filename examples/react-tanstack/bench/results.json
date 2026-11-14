@@ -1,0 +1,262 @@
+{
+  "meta": {
+    "date": "2026-11-14T20:48:06.029Z",
+    "iterations": 7,
+    "latenciesMs": [
+      0,
+      300
+    ],
+    "server": "vite dev server (unbundled modules)",
+    "browser": "Chromium (headless)",
+    "node": "v22.23.3",
+    "platform": "darwin-x64",
+    "tokens": {
+      "textCharsPerToken": 4,
+      "base64CharsPerToken": 2
+    }
+  },
+  "timings": [
+    {
+      "scenario": "cart-with-coupon",
+      "latencyMs": 0,
+      "mode": "click-through",
+      "samplesMs": [
+        1448,
+        1602,
+        1924,
+        2460,
+        1606,
+        1852,
+        1683
+      ]
+    },
+    {
+      "scenario": "cart-with-coupon",
+      "latencyMs": 0,
+      "mode": "warp",
+      "samplesMs": [
+        905,
+        902,
+        949,
+        1261,
+        1122,
+        1201,
+        1029
+      ]
+    },
+    {
+      "scenario": "checkout-review",
+      "latencyMs": 0,
+      "mode": "click-through",
+      "samplesMs": [
+        1550,
+        1617,
+        1769,
+        1636,
+        1603,
+        1579,
+        1596
+      ]
+    },
+    {
+      "scenario": "checkout-review",
+      "latencyMs": 0,
+      "mode": "warp",
+      "samplesMs": [
+        970,
+        1076,
+        1046,
+        1031,
+        1177,
+        1162,
+        1046
+      ]
+    },
+    {
+      "scenario": "search-results",
+      "latencyMs": 0,
+      "mode": "click-through",
+      "samplesMs": [
+        1242,
+        1418,
+        1464,
+        1599,
+        1382,
+        1536,
+        1510
+      ]
+    },
+    {
+      "scenario": "search-results",
+      "latencyMs": 0,
+      "mode": "warp",
+      "samplesMs": [
+        1189,
+        1136,
+        1145,
+        1137,
+        1150,
+        1099,
+        1223
+      ]
+    },
+    {
+      "scenario": "cart-with-coupon",
+      "latencyMs": 300,
+      "mode": "click-through",
+      "samplesMs": [
+        3228,
+        3179,
+        3094,
+        3115,
+        3172,
+        3046,
+        2995
+      ]
+    },
+    {
+      "scenario": "cart-with-coupon",
+      "latencyMs": 300,
+      "mode": "warp",
+      "samplesMs": [
+        1179,
+        1091,
+        1186,
+        1083,
+        1064,
+        1357,
+        1376
+      ]
+    },
+    {
+      "scenario": "checkout-review",
+      "latencyMs": 300,
+      "mode": "click-through",
+      "samplesMs": [
+        2440,
+        2155,
+        2002,
+        1950,
+        2487,
+        2456,
+        2347
+      ]
+    },
+    {
+      "scenario": "checkout-review",
+      "latencyMs": 300,
+      "mode": "warp",
+      "samplesMs": [
+        1343,
+        1425,
+        1249,
+        1121,
+        1309,
+        1438,
+        1088
+      ]
+    },
+    {
+      "scenario": "search-results",
+      "latencyMs": 300,
+      "mode": "click-through",
+      "samplesMs": [
+        2086,
+        1653,
+        1774,
+        1543,
+        1501,
+        1571,
+        1718
+      ]
+    },
+    {
+      "scenario": "search-results",
+      "latencyMs": 300,
+      "mode": "warp",
+      "samplesMs": [
+        1168,
+        1163,
+        1088,
+        1058,
+        1292,
+        1152,
+        1072
+      ]
+    }
+  ],
+  "agent": [
+    {
+      "scenario": "cart-with-coupon",
+      "mode": "click-through",
+      "toolCalls": 11,
+      "inputChars": 864,
+      "outputChars": 6704,
+      "estimatedTokens": 1892
+    },
+    {
+      "scenario": "cart-with-coupon",
+      "mode": "warp (compact)",
+      "toolCalls": 3,
+      "inputChars": 960,
+      "outputChars": 1246,
+      "estimatedTokens": 754
+    },
+    {
+      "scenario": "cart-with-coupon",
+      "mode": "warp (json)",
+      "toolCalls": 3,
+      "inputChars": 1629,
+      "outputChars": 1246,
+      "estimatedTokens": 719
+    },
+    {
+      "scenario": "checkout-review",
+      "mode": "click-through",
+      "toolCalls": 11,
+      "inputChars": 908,
+      "outputChars": 6074,
+      "estimatedTokens": 1746
+    },
+    {
+      "scenario": "checkout-review",
+      "mode": "warp (compact)",
+      "toolCalls": 3,
+      "inputChars": 949,
+      "outputChars": 1109,
+      "estimatedTokens": 715
+    },
+    {
+      "scenario": "checkout-review",
+      "mode": "warp (json)",
+      "toolCalls": 3,
+      "inputChars": 1478,
+      "outputChars": 1109,
+      "estimatedTokens": 647
+    },
+    {
+      "scenario": "search-results",
+      "mode": "click-through",
+      "toolCalls": 4,
+      "inputChars": 321,
+      "outputChars": 3523,
+      "estimatedTokens": 961
+    },
+    {
+      "scenario": "search-results",
+      "mode": "warp (compact)",
+      "toolCalls": 3,
+      "inputChars": 873,
+      "outputChars": 1231,
+      "estimatedTokens": 707
+    },
+    {
+      "scenario": "search-results",
+      "mode": "warp (json)",
+      "toolCalls": 3,
+      "inputChars": 1724,
+      "outputChars": 1231,
+      "estimatedTokens": 740
+    }
+  ]
+}

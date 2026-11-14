@@ -25,6 +25,8 @@ It is plug and play with **React + TanStack Router**, with adapters for **TanSta
 - [Production safety](#production-safety)
 - [Obsolete snapshots and migrations](#obsolete-snapshots-and-migrations)
 - [API reference](#api-reference)
+- [Benchmark](#benchmark)
+- [Compatibility](#compatibility)
 - [Limitations](#limitations)
 - [Roadmap](#roadmap)
 
@@ -186,7 +188,9 @@ const text = await encodeSnapshot(snapshot); // "warp1.rVTBbt..."
 await warp(text);                             // warp(), loadSnapshot() and the agent tools accept any form
 ```
 
-Save a compact file with `saveSnapshot("x.warp", snapshot)`, or copy one with `<WarpProvider copy="compact">`. A binary format such as CBOR or MessagePack was considered and rejected: on this kind of data it saves only about 20–30% over minified JSON (compression saves more), it cannot be reviewed in a diff, and it would need a dependency.
+Save a compact file with `saveSnapshot("x.warp", snapshot)`, or copy one with `<WarpProvider copy="compact">`.
+
+**Bytes are not tokens.** Base64 tokenizes poorly (roughly 2 characters per token vs. ~4 for JSON), so for an LLM the compact form only pays off on large snapshots. For the example's ~1.5 KB scenarios, minified JSON and the compact form cost about the same number of tokens. That is why the agent capture tool defaults to `format: "auto"`, which picks whichever form is cheaper. A binary format such as CBOR or MessagePack was considered and rejected: on this kind of data it saves only about 20–30% over minified JSON (compression saves more), it cannot be reviewed in a diff, and it would need a dependency.
 
 ## Writing an adapter
 
@@ -247,7 +251,7 @@ Then wait until `window.__WARPSTATE__.status` is `"ready"` (or `"error"`, with d
 | Tool | What it does |
 | --- | --- |
 | `warpstate_status` | Hydration status, current route, registered adapters, warnings. Read-only. |
-| `warpstate_capture` | Captures the current state (compact by default, `format: "json"` for the object). Read-only. |
+| `warpstate_capture` | Captures the current state. `format: "auto"` (default) returns JSON for small snapshots and the compact string when it is cheaper in tokens. Read-only. |
 | `warpstate_load` | Validates a snapshot, queues it and reloads the page into it. |
 
 ```ts
@@ -315,6 +319,33 @@ Snapshots from another `app.name` are rejected with `APP_MISMATCH`.
 ### TanStack Query notes
 
 Restored queries are stamped as fetched "now" (`freshen`). While the app is warping, `freeze` sets the client's default `staleTime` to `Infinity` and turns off focus and reconnect refetches and retries. Restored data therefore stays authoritative, and a scenario renders with zero requests. Per-query options still win, and invalidations (after a mutation, for example) still refetch. Turn either option off to get the original behavior.
+
+## Benchmark
+
+`pnpm --filter example-react-tanstack bench` reaches each example scenario two ways: by clicking through the UI, and with `warp()`. Each way ends with the same assertion. Full method and raw data: [`bench/RESULTS.md`](examples/react-tanstack/bench/RESULTS.md).
+
+**CI time** (median of 7, Chromium headless, Vite dev server):
+
+| Simulated API latency | Click-through (3 scenarios) | warp() | Saved |
+| --- | ---: | ---: | ---: |
+| 0 ms | 4.75 s | 3.22 s | 32% |
+| 300 ms | 7.12 s | 3.64 s | 49% |
+
+The cost of `warp()` is flat (≈1 s, mostly app boot). The cost of clicking through grows with every step × request latency. Here the flows are only 4–11 actions long, so real suites with longer setups gain more.
+
+**Agent cost** to bring a browser agent into a scenario, modeling a Playwright-MCP-style agent that receives an ARIA snapshot after every action:
+
+| Scenario | Click-through | warpstate_load |
+| --- | ---: | ---: |
+| cart-with-coupon (11 actions) | 11 calls · ≈1,890 tokens | 3 calls · ≈720 tokens |
+| checkout-review (11 actions) | 11 calls · ≈1,750 tokens | 3 calls · ≈650 tokens |
+| search-results (4 actions) | 4 calls · ≈960 tokens | 3 calls · ≈710 tokens |
+
+Characters are measured. Tokens are an estimate (4 characters per token for text, 2 for base64), and the reasoning an agent does between steps is not counted.
+
+## Compatibility
+
+See [COMPATIBILITY.md](COMPATIBILITY.md) for the tested library versions. The matrix lives in [`compat/matrix.json`](compat/matrix.json); add a version and run `pnpm compat` to extend it.
 
 ## Limitations
 

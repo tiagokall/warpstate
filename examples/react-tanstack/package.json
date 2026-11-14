@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit -p .",
     "e2e": "playwright test",
     "record": "RECORD=1 playwright test --project=record",
-    "check:prod": "vite build && node scripts/check-prod-bundle.mjs"
+    "check:prod": "vite build && node scripts/check-prod-bundle.mjs",
+    "bench": "BENCH=1 playwright test --project=bench"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.107.1",
