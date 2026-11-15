@@ -41,7 +41,9 @@ export interface WarpstatePluginOptions {
   linkParam?: string | false;
 }
 
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+type ResolveIdHandler = Extract<NonNullable<Plugin["resolveId"]>, (...args: never[]) => unknown>;
+
+const escapeRegExp =(value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Inline script that reports a bad `?warp=` link in the console and in `__WARPSTATE__`. */
 function linkErrorScript(message: string): string {
@@ -69,6 +71,19 @@ export function warpstate(options: WarpstatePluginOptions = {}): Plugin {
   const dirs = options.scenarios === false ? [] : (options.scenarios ?? ["."]);
   const linkParam = options.linkParam === false ? null : (options.linkParam ?? "warp");
   const linkFor = (id: string) => (linkParam ? `/?${linkParam}=${encodeURIComponent(id)}` : undefined);
+
+  const handler: ResolveIdHandler = async function (source, importer, resolveOptions) {
+    if (!strip || !packages.has(source)) return null;
+    const resolved = await this.resolve(`${source}/noop`, importer, { ...resolveOptions, skipSelf: true });
+    if (!resolved) {
+      this.error(`[warpstate] ${source} has no "/noop" entry; cannot strip it from the production build.`);
+    }
+    return resolved;
+  };
+  // Hook filter (Vite 6.3+, Rolldown): the hook only runs for the runtime
+  // packages instead of every import in the app. Older Vite ignores `filter`;
+  // kept out of the plugin literal so Vite 5 typings (no `filter`) accept it.
+  const resolveId = { filter: { id: new RegExp(`^(${[...packages].map(escapeRegExp).join("|")})$`) }, handler };
 
   return {
     name: "warpstate",
@@ -144,19 +159,7 @@ export function warpstate(options: WarpstatePluginOptions = {}): Plugin {
         })().catch(next);
       });
     },
-    resolveId: {
-      // Hook filter (Vite 6.3+, Rolldown): the hook only runs for the runtime
-      // packages instead of every import in the app. Older Vite ignores it.
-      filter: { id: new RegExp(`^(${[...packages].map(escapeRegExp).join("|")})$`) },
-      async handler(source, importer, resolveOptions) {
-        if (!strip || !packages.has(source)) return null;
-        const resolved = await this.resolve(`${source}/noop`, importer, { ...resolveOptions, skipSelf: true });
-        if (!resolved) {
-          this.error(`[warpstate] ${source} has no "/noop" entry; cannot strip it from the production build.`);
-        }
-        return resolved;
-      },
-    },
+    resolveId,
   };
 }
 
