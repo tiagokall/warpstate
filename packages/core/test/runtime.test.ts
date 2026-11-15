@@ -254,11 +254,8 @@ describe("capture", () => {
       restore: () => {},
     });
     const { warnings } = captureSnapshotWithReport();
-    expect(warnings).toEqual([
-      "stores.weird.when: Date (becomes a string)",
-      "stores.weird.tags: Set (becomes {})",
-      "stores.weird.fn: function (dropped)",
-    ]);
+    // Date and Set are encoded (encodeValue) and restore as themselves; functions cannot be.
+    expect(warnings).toEqual(["stores.weird.fn: function (dropped)"]);
   });
 
   it("exposes capture on the global", () => {

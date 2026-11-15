@@ -3,7 +3,7 @@ import { WarpError, isWarpError } from "./errors";
 import { getWarpGlobal } from "./global";
 import { safeParseSnapshot } from "./parse";
 import { WARP_FORMAT_VERSION, type WarpRouterState, type WarpSnapshot } from "./schema";
-import { findNonSerializable } from "./serializable";
+import { decodeValue, encodeValue, findNonSerializable } from "./serializable";
 import { decodeSnapshot } from "./encoding";
 import { PENDING_STORAGE_KEY, takePendingSnapshot } from "./pending";
 import { captureStorage, restoreStorage, type StorageCaptureOptions } from "./storage";
@@ -217,7 +217,7 @@ function restoreAdapter(adapter: AnyAdapter, snapshot: WarpSnapshot): void {
   if (rt.restored.has(adapter.name)) return;
   rt.restored.add(adapter.name);
 
-  const data = dataFor(snapshot, adapter.name);
+  const data = adapter.name === "router" ? dataFor(snapshot, adapter.name) : decodeValue(dataFor(snapshot, adapter.name));
   if (data === undefined) return;
 
   const fail = (cause: unknown) =>
@@ -311,9 +311,14 @@ export function captureSnapshotWithReport(meta?: WarpSnapshot["meta"]): CaptureR
   let query: unknown;
 
   for (const [name, adapter] of rt.adapters) {
-    const data: unknown = adapter.capture();
-    if (name === "router") router = data as WarpRouterState;
-    else if (name === "query") query = data;
+    const raw: unknown = adapter.capture();
+    if (name === "router") {
+      router = raw as WarpRouterState;
+      continue;
+    }
+    // Map, Set, Date and bigint survive as tagged objects (see encodeValue).
+    const data = encodeValue(raw);
+    if (name === "query") query = data;
     else if (data !== undefined) stores[name] = data;
   }
 

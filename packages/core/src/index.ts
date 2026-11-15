@@ -42,7 +42,7 @@ export {
   type StorageCaptureOptions,
   type StorageKeySelection,
 } from "./storage";
-export { findNonSerializable } from "./serializable";
+export { TYPE_TAG, decodeValue, encodeValue, findNonSerializable } from "./serializable";
 export { serializeSnapshot, snapshotFileName, downloadSnapshot, copySnapshot } from "./files";
 export { parseShortcut, matchesShortcut, type ParsedShortcut } from "./shortcut";
 
