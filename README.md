@@ -1,46 +1,50 @@
 # warpstate
 
-**Open your React app directly in the exact state of a test scenario, in one render, with no automated clicking.**
+**Save any screen of your React app as a file, then reopen it exactly as it was: in a test, from a link, or by an AI agent.**
 
-warpstate captures a scenario (route + history stack + stores + data cache) into a small JSON file. Your end-to-end test then boots the app straight into that state:
+A warp is a small JSON file holding everything that makes a screen look the way it does: the route, the history stack, store contents and the data cache. Opening it boots the app straight into that screen on the first render. No clicking through the UI, and no backend data that has to still exist.
 
-```ts
-test("cart with coupon", async ({ page, warp }) => {
-  await warp("e2e/snapshots/cart-with-coupon.warp.json");
-  await expect(page.getByTestId("total")).toHaveText("$47.7");
-});
+```
+http://localhost:5173/?warp=checkout-review
 ```
 
-It is plug and play with **React + TanStack Router**, with adapters for **TanStack Query** and **Zustand**, and it ships helpers for **Playwright**.
+It is plug and play with **React + TanStack Router**, with adapters for **TanStack Query** and **Zustand**, plus helpers for **Playwright** and agent tools for **WebMCP**.
 
 ---
 
-- [The problem](#the-problem)
+## What you get
+
+- **A failing e2e test leaves a screen, not only a trace.** When a Playwright test fails, the app state is saved next to the report with a link. Open it and you are on the exact screen, with the same history and data the test ended with, even after the backend data it used is gone. Usually the cause is visible right away. → [When a test fails](#when-a-test-fails-reopen-the-exact-state)
+- **"Show me" links.** You, a teammate or an agent can put the app in a given state and share it as a URL: `?warp=<id>` in `vite dev`. It works in any browser, with no extension. → ["Show me" links](#show-me-links-that-open-a-state)
+- **Agents check their own UI work.** `warpstate-shots` screenshots every saved screen before and after a change and lists the ones that changed, so an agent sees what its edit did before calling it done. → [`warpstate-shots`](#checking-a-ui-change-warpstate-shots)
+- **Agents reach a screen without clicking.** With WebMCP, a browser agent lists the project's saved screens and loads one directly, instead of driving the UI step by step (3 tool calls instead of 11 in the example). → [AI agents](#ai-agents-webmcp)
+- **Bug reports that carry the state.** Press Ctrl+Shift+S on a broken screen and paste the compact string (`warp1.…`) in the issue. Whoever picks it up opens the same screen.
+- **Tests about one screen stay about that screen.** A test can start on the step it checks, so a change to the search page no longer breaks the checkout tests, and the test body shows only what it is about.
+- **Zero cost in production.** The Vite plugin swaps the whole runtime for no-ops in production builds, and the runtime refuses injected state there anyway. → [Production safety](#production-safety)
+
+Tried on a production app (Vite 8, React 19, TanStack Router + Query, Supabase):
+
+- six real screens reopened from their warps with the same content as when reached by clicking, making 6–10 backend calls instead of 29–68;
+- the link from a deliberately broken test showed the cause on first view;
+- `warpstate-shots` flagged exactly the one screen a text change touched.
+
+---
+
 - [How it works](#how-it-works)
 - [Quickstart](#quickstart)
+- [When a test fails: reopen the exact state](#when-a-test-fails-reopen-the-exact-state)
+- ["Show me" links](#show-me-links-that-open-a-state)
+- [Checking a UI change: `warpstate-shots`](#checking-a-ui-change-warpstate-shots)
+- [AI agents (WebMCP)](#ai-agents-webmcp)
 - [Snapshot format](#snapshot-format)
 - [Writing an adapter](#writing-an-adapter)
 - [Other test runners](#other-test-runners)
-- [AI agents (WebMCP)](#ai-agents-webmcp)
 - [Production safety](#production-safety)
 - [Obsolete snapshots and migrations](#obsolete-snapshots-and-migrations)
 - [API reference](#api-reference)
-- [Benchmark](#benchmark)
 - [Compatibility](#compatibility)
 - [Limitations](#limitations)
 - [Roadmap](#roadmap)
-
-## The problem
-
-To test the last step of a checkout, an e2e test usually replays everything before it: open the home page, search, open a product, add to cart, apply a coupon, fill in the shipping form… That makes the test:
-
-- **slow**, because every step waits on rendering and network;
-- **brittle**, because a change to the search page breaks the checkout tests;
-- **noisy**, because the setup hides what the test is actually about.
-
-Seeding the backend helps with data, but not with client state such as the router's history stack, store contents or cached queries.
-
-warpstate removes the setup. A scenario is captured once (by hand, by a script or by an agent), committed as a `.warp.json` file, and every test opens the app *already in that state*.
 
 ## How it works
 
@@ -153,6 +157,144 @@ Already have your own `test.extend()`? Spread `warpFixtures` into it, or call `w
 
 > The dev server must serve the app at the snapshot's URL (any SPA fallback does). Run e2e against `vite dev` or a build made with `warpstate({ keepInProduction: true })` and `allowInProduction: true`.
 
+## When a test fails: reopen the exact state
+
+The cost of a red e2e test is usually the time spent figuring out what the screen looked like. The `test` from `@warpstate/playwright` includes an auto fixture: when a test fails, it captures the app state of every open page, saves it next to the report (`test-results/<test>/<spec>--<title>.warp.json`) and attaches it, along with a link that reopens it:
+
+```
+http://localhost:5173/?warp=shop--checkout-total
+```
+
+The dev server's [catalog](#how-an-agent-finds-and-uses-scenarios) includes `test-results/` by default, so the link works as soon as `vite dev` is running. You land on the screen, history and data the test ended with, even after the backend data it used is gone. Usually the screen shows the cause right away, faster than reading a trace.
+
+- Using your own `test`? Extend it: `base.extend(failureSnapshotFixtures)`.
+- `test.use({ warpCapture: "always" | "on-failure" | "off" })` controls when it captures. The default is `"on-failure"`.
+- Pages without the warpstate runtime, such as production builds, are skipped, so the fixture costs nothing there.
+
+## "Show me": links that open a state
+
+Reaching a specific screen by hand (a cart with an expired coupon, the checkout review with a long address, an admin page with a dozen filters set) can take minutes of clicking, and someone else has to repeat it. With warpstate it is a link. This is also the most useful thing an agent can do with a scenario: **put the screen in a state for you** and send the link. In `vite dev`, any page URL with `?warp=` opens the app in that state, in any browser, with no extension, MCP or WebMCP:
+
+```
+http://localhost:5173/?warp=checkout-review      # a scenario id: the file name of any *.warp.json in the project
+http://localhost:5173/?warp=warp1.…              # an inline compact snapshot
+```
+
+The dev server inlines the snapshot into the HTML before the app's scripts run, so the screen renders in that state on the first paint. Reloading the link resets it. The catalog returns each scenario's `link`, and the dev server prints the pattern at startup. A bad id never boots a wrong state: the app starts normally and the console says which ids exist. Like the catalog, links only work in `vite dev`. Rename the parameter with `warpstate({ linkParam: "state" })` or turn it off with `linkParam: false`.
+
+For a state that does not exist yet, a coding agent copies the closest `.warp.json`, edits the stores or route (the snapshot is plain JSON), saves it next to the others and sends you the link. The catalog picks up new files on the next request, and the same file then works as an e2e fixture.
+
+For coding agents that read the repo rather than the browser (Claude Code, Cursor, Codex), a few lines in `AGENTS.md` / `CLAUDE.md` teach the whole workflow:
+
+```md
+## App states (warpstate)
+- Saved app states live in `e2e/snapshots/*.warp.json`; `meta.description` says what each one is.
+- To show me a screen in a given state: with the dev server running, send me `http://localhost:5173/?warp=<id>`.
+  If no scenario matches, copy the closest file, edit `stores` / `query` / `router` (plain JSON),
+  save it as `e2e/snapshots/<new-id>.warp.json` with a clear `meta.description`, then send the link.
+- In the browser (dev server + WebMCP): `warpstate_list_scenarios`, then `warpstate_load { scenario: "<id>" }`.
+- In Playwright tests: `await warp("e2e/snapshots/<id>.warp.json")` from `@warpstate/playwright`.
+- To record a state from the running app, call `warpstate_capture` or press Ctrl+Shift+S.
+```
+
+## Checking a UI change: `warpstate-shots`
+
+`warpstate-shots` (in `@warpstate/playwright`) opens every scenario in the dev server's catalog, screenshots it, and compares the result with an earlier run. Agents use it to see what a change did before calling it done:
+
+```sh
+npx warpstate-shots --out .warpstate/shots/before        # before the change
+# …edit code…
+npx warpstate-shots --compare .warpstate/shots/before    # lists changed screens, writes *.diff.png
+```
+
+- It waits for two identical frames before shooting, so lazy chunks and skeletons settle first.
+- `--mask` paints over live regions such as clocks and charts.
+- `--storage` loads a logged-in Playwright `storageState`.
+- `--only` picks scenarios.
+
+Output is one line per screen (`same`, `0.05%`, `new`, `error: …`) plus `report.json`. Add `.warpstate/` to `.gitignore`.
+
+## AI agents (WebMCP)
+
+`@warpstate/webmcp` registers [WebMCP](https://webmachinelearning.github.io/webmcp/) tools so a browser agent can work with scenarios:
+
+| Tool | What it does |
+| --- | --- |
+| `warpstate_status` | Hydration status, current route, registered adapters, warnings. Read-only. |
+| `warpstate_list_scenarios` | The project's saved scenarios: id, name, description, route, history length and what each restores. Read-only. Needs `@warpstate/vite` (see below). |
+| `warpstate_capture` | Captures the current state. `format: "auto"` (default) returns JSON for small snapshots and the compact string when it is cheaper in tokens. Read-only. |
+| `warpstate_load` | `{ scenario: "<id>" }` or `{ snapshot }`: validates it, queues it and reloads the page into it. |
+
+```ts
+import { registerWarpTools } from "@warpstate/webmcp";
+registerWarpTools(); // no-op in production or when WebMCP is unavailable
+```
+
+It uses `document.modelContext` (current spec) and falls back to `navigator.modelContext` (older Chrome builds, the MCP-B polyfill).
+
+### How an agent finds and uses scenarios
+
+An agent never has to know where the snapshot files are, or paste one into the conversation. In dev, the `warpstate()` Vite plugin serves a **read-only catalog** of every `*.warp.json` / `*.warp` file in the project:
+
+```
+GET /__warpstate/scenarios        → { scenarios: [{ id, name, description, route, historyLength, restores, file }] }
+GET /__warpstate/scenarios/:id    → the snapshot
+```
+
+The tools describe the workflow themselves, so a capable agent follows it without extra prompting: `warpstate_status` points to `warpstate_list_scenarios`, and the list result says to call `warpstate_load({ scenario: id })`. A session looks like this:
+
+```text
+agent → warpstate_list_scenarios
+      ← [{ id: "cart-with-coupon", name: "Cart with coupon",
+           description: "2 mugs + 1 tee, WARP10 applied; history: home → products → mug → cart",
+           route: "/cart", historyLength: 4, restores: ["cart", "checkout", "query"] }, …]
+agent → warpstate_load { scenario: "cart-with-coupon" }   // page reloads into the cart, no clicks
+agent → warpstate_status                                  // { status: "ready", location: "/cart" }
+```
+
+`meta.name` and `meta.description` are what the agent reads to pick a scenario, so write them for that reader (the capture prompt and `captureWarp(page, { name, description })` both set them).
+
+Safety: the catalog exists only in `vite dev` (never in a build or `vite preview`), it is read-only, and it serves only files found by its scan. Ids are not paths: `../../package.json` is just an unknown id. Scope the scan with `warpstate({ scenarios: ["e2e/snapshots"] })` or turn it off with `scenarios: false`. Unknown ids come back as a tool error listing the known ones. Without the plugin, `warpstate_list_scenarios` says how to add it.
+
+**Validated against Chrome's real WebMCP implementation** (Chrome 157 stable and Chromium 159). A [Playwright suite](examples/react-tanstack/e2e/webmcp/webmcp.spec.ts) launches Chrome with WebMCP enabled and plays the browser agent through the DevTools Protocol `WebMCP` domain (`toolsAdded`, `invokeTool`, `toolResponded`). It checks that the tools register with their schemas and annotations, that status and capture return results, that an agent can list the project's scenarios and open one by id, and that `warpstate_load` reloads the page into a scenario whose new document registers fresh tools. An invalid snapshot comes back as a tool error. It runs in CI on every push.
+
+To try it yourself, enable `chrome://flags/#enable-webmcp-testing` (or launch Chromium with `--enable-features=WebMCP`). Then run the example and check `await document.modelContext.getTools()` in the console. [`e2e/webmcp/agent.ts`](examples/react-tanstack/e2e/webmcp/agent.ts) is a ~100-line CDP client you can reuse to drive any page's WebMCP tools from Playwright. Agents that drive the page another way, such as Playwright MCP or DevTools, can use the same operations on the global:
+
+```js
+await window.__WARPSTATE__.capture({ name: "bug repro" }); // snapshot object
+await window.__WARPSTATE__.load("warp1.…");                 // reloads into it
+window.__WARPSTATE__.status;                                // "idle" | "pending" | "hydrating" | "ready" | "error"
+```
+
+A typical loop: an agent reproduces a bug, captures it, and hands the compact string to a developer or to a test.
+
+### Connecting an MCP agent (Claude Code, Claude Desktop, Cursor…)
+
+The official [Chrome DevTools MCP](https://github.com/ChromeDevTools/chrome-devtools-mcp) server can list and call a page's WebMCP tools (`list_webmcp_tools`, `execute_webmcp_tool`), so any MCP client reaches warpstate's tools without a custom bridge:
+
+```sh
+claude mcp add chrome-devtools --scope project -- npx -y chrome-devtools-mcp@latest \
+  --categoryExperimentalWebmcp --chromeArg=--enable-features=WebMCP --isolated
+```
+
+Then ask the agent to open your dev server and use the `warpstate_*` tools. Requirements: Chrome 150+ (WebMCP behind `--enable-features=WebMCP`) and a dev build of your app. Chrome DevTools MCP leaves tools marked with the WebMCP `debugging` annotation out of `list_webmcp_tools`, so warpstate does not set that mark by default. Pass `registerWarpTools({ debugging: true })` if you want the tools listed only as developer tools (`--categoryExperimentalThirdParty`).
+
+Every Chrome DevTools MCP tool takes a `pageId` (from `list_pages`), and `execute_webmcp_tool` takes the tool input as a JSON string: `{ "pageId": 1, "toolName": "warpstate_load", "input": "{\"scenario\":\"cart-with-coupon\"}" }`.
+
+> The chain *page → Chrome WebMCP → CDP `WebMCP.invokeTool`* is covered by this repo's e2e tests in CI. The full *MCP client → Chrome DevTools MCP 1.13 → Chrome 157 → warpstate* chain was validated by hand against a local dev server. The tools were listed with `debugging: false`, and `status`, `list_scenarios` and `load { scenario }` all ran, opening the cart at `/cart` with `status: "ready"`. That hop is not automated in CI yet.
+
+### Cost for an agent
+
+Bringing a browser agent into a scenario, modeling a Playwright-MCP-style agent that receives an ARIA snapshot after every action:
+
+| Scenario | Click-through | warpstate_load |
+| --- | ---: | ---: |
+| cart-with-coupon (11 actions) | 11 calls · ≈1,890 tokens | 3 calls · ≈720 tokens |
+| checkout-review (11 actions) | 11 calls · ≈1,750 tokens | 3 calls · ≈650 tokens |
+| search-results (4 actions) | 4 calls · ≈960 tokens | 3 calls · ≈710 tokens |
+
+Characters are measured. Tokens are an estimate (4 characters per token for text, 2 for base64), and the reasoning an agent does between steps is not counted. Reproduce with `pnpm --filter example-react-tanstack bench` ([`bench/RESULTS.md`](examples/react-tanstack/bench/RESULTS.md)).
+
 ## Snapshot format
 
 ```ts
@@ -228,37 +370,6 @@ Rules of thumb:
 - Store data with no matching adapter produces a warning on `__WARPSTATE__.warnings`. Set `strict: true` to make it an error.
 - For a Redux-like store: `capture: () => store.getState()`, and `restore: (s) => store.dispatch({ type: "warp/restore", payload: s })` handled by your root reducer.
 
-## When a test fails: reopen the exact state
-
-The `test` from `@warpstate/playwright` includes an auto fixture: when a test fails, it captures the app state of every open page, saves it next to the report (`test-results/<test>/<spec>--<title>.warp.json`) and attaches it, along with a link that reopens it:
-
-```
-http://localhost:5173/?warp=shop--checkout-total
-```
-
-The dev server's catalog includes `test-results/` by default, so the link works as soon as `vite dev` is running. You land on the screen, history and data the test ended with, even after the backend data it used is gone. Usually the screen shows the cause right away, faster than reading a trace.
-
-- Using your own `test`? Extend it: `base.extend(failureSnapshotFixtures)`.
-- `test.use({ warpCapture: "always" | "on-failure" | "off" })` controls when it captures. The default is `"on-failure"`.
-- Pages without the warpstate runtime, such as production builds, are skipped, so the fixture costs nothing there.
-
-## Checking a UI change: `warpstate-shots`
-
-`warpstate-shots` (in `@warpstate/playwright`) opens every scenario in the dev server's catalog, screenshots it, and compares the result with an earlier run. Agents use it to see what a change did before calling it done:
-
-```sh
-npx warpstate-shots --out .warpstate/shots/before        # before the change
-# …edit code…
-npx warpstate-shots --compare .warpstate/shots/before    # lists changed screens, writes *.diff.png
-```
-
-- It waits for two identical frames before shooting, so lazy chunks and skeletons settle first.
-- `--mask` paints over live regions such as clocks and charts.
-- `--storage` loads a logged-in Playwright `storageState`.
-- `--only` picks scenarios.
-
-Output is one line per screen (`same`, `0.05%`, `new`, `error: …`) plus `report.json`. Add `.warpstate/` to `.gitignore`.
-
 ## Other test runners
 
 The injection is a plain script, so any runner that can run code before page scripts can use it:
@@ -276,101 +387,6 @@ await bidi.script.addPreloadScript({ functionDeclaration: `() => { ${script} }` 
 ```
 
 Then wait until `window.__WARPSTATE__.status` is `"ready"` (or `"error"`, with details in `.error`).
-
-## AI agents (WebMCP)
-
-`@warpstate/webmcp` registers [WebMCP](https://webmachinelearning.github.io/webmcp/) tools so a browser agent can work with scenarios:
-
-| Tool | What it does |
-| --- | --- |
-| `warpstate_status` | Hydration status, current route, registered adapters, warnings. Read-only. |
-| `warpstate_list_scenarios` | The project's saved scenarios: id, name, description, route, history length and what each restores. Read-only. Needs `@warpstate/vite` (see below). |
-| `warpstate_capture` | Captures the current state. `format: "auto"` (default) returns JSON for small snapshots and the compact string when it is cheaper in tokens. Read-only. |
-| `warpstate_load` | `{ scenario: "<id>" }` or `{ snapshot }`: validates it, queues it and reloads the page into it. |
-
-```ts
-import { registerWarpTools } from "@warpstate/webmcp";
-registerWarpTools(); // no-op in production or when WebMCP is unavailable
-```
-
-It uses `document.modelContext` (current spec) and falls back to `navigator.modelContext` (older Chrome builds, the MCP-B polyfill).
-
-### How an agent finds and uses scenarios
-
-An agent never has to know where the snapshot files are, or paste one into the conversation. In dev, the `warpstate()` Vite plugin serves a **read-only catalog** of every `*.warp.json` / `*.warp` file in the project:
-
-```
-GET /__warpstate/scenarios        → { scenarios: [{ id, name, description, route, historyLength, restores, file }] }
-GET /__warpstate/scenarios/:id    → the snapshot
-```
-
-The tools describe the workflow themselves, so a capable agent follows it without extra prompting: `warpstate_status` points to `warpstate_list_scenarios`, and the list result says to call `warpstate_load({ scenario: id })`. A session looks like this:
-
-```text
-agent → warpstate_list_scenarios
-      ← [{ id: "cart-with-coupon", name: "Cart with coupon",
-           description: "2 mugs + 1 tee, WARP10 applied; history: home → products → mug → cart",
-           route: "/cart", historyLength: 4, restores: ["cart", "checkout", "query"] }, …]
-agent → warpstate_load { scenario: "cart-with-coupon" }   // page reloads into the cart, no clicks
-agent → warpstate_status                                  // { status: "ready", location: "/cart" }
-```
-
-`meta.name` and `meta.description` are what the agent reads to pick a scenario, so write them for that reader (the capture prompt and `captureWarp(page, { name, description })` both set them).
-
-Safety: the catalog exists only in `vite dev` (never in a build or `vite preview`), it is read-only, and it serves only files found by its scan. Ids are not paths: `../../package.json` is just an unknown id. Scope the scan with `warpstate({ scenarios: ["e2e/snapshots"] })` or turn it off with `scenarios: false`. Unknown ids come back as a tool error listing the known ones. Without the plugin, `warpstate_list_scenarios` says how to add it.
-
-### "Show me": links that open a state
-
-The most useful thing an agent can do with a scenario is often to **put the screen in a state for you**: "show me the checkout review with a long address", "open the cart with an expired coupon". In `vite dev`, any page URL with `?warp=` opens the app in that state, in any browser, with no extension, MCP or WebMCP:
-
-```
-http://localhost:5173/?warp=checkout-review      # a scenario id from the catalog
-http://localhost:5173/?warp=warp1.…              # an inline compact snapshot
-```
-
-The dev server inlines the snapshot into the HTML before the app's scripts run, so the screen renders in that state on the first paint. Reloading the link resets it. The catalog returns each scenario's `link`, and the dev server prints the pattern at startup. A bad id never boots a wrong state: the app starts normally and the console says which ids exist. Like the catalog, links only work in `vite dev`. Rename the parameter with `warpstate({ linkParam: "state" })` or turn it off with `linkParam: false`.
-
-For a state that does not exist yet, a coding agent copies the closest `.warp.json`, edits the stores or route (the snapshot is plain JSON), saves it next to the others and sends you the link. The catalog picks up new files on the next request, and the same file then works as an e2e fixture.
-
-For coding agents that read the repo rather than the browser (Claude Code, Cursor, Codex), a few lines in `AGENTS.md` / `CLAUDE.md` teach the whole workflow:
-
-```md
-## App states (warpstate)
-- Saved app states live in `e2e/snapshots/*.warp.json`; `meta.description` says what each one is.
-- To show me a screen in a given state: with the dev server running, send me `http://localhost:5173/?warp=<id>`.
-  If no scenario matches, copy the closest file, edit `stores` / `query` / `router` (plain JSON),
-  save it as `e2e/snapshots/<new-id>.warp.json` with a clear `meta.description`, then send the link.
-- In the browser (dev server + WebMCP): `warpstate_list_scenarios`, then `warpstate_load { scenario: "<id>" }`.
-- In Playwright tests: `await warp("e2e/snapshots/<id>.warp.json")` from `@warpstate/playwright`.
-- To record a state from the running app, call `warpstate_capture` or press Ctrl+Shift+S.
-```
-
-**Validated against Chrome's real WebMCP implementation** (Chrome 157 stable and Chromium 159). A [Playwright suite](examples/react-tanstack/e2e/webmcp/webmcp.spec.ts) launches Chrome with WebMCP enabled and plays the browser agent through the DevTools Protocol `WebMCP` domain (`toolsAdded`, `invokeTool`, `toolResponded`). It checks that the tools register with their schemas and annotations, that status and capture return results, that an agent can list the project's scenarios and open one by id, and that `warpstate_load` reloads the page into a scenario whose new document registers fresh tools. An invalid snapshot comes back as a tool error. It runs in CI on every push.
-
-To try it yourself, enable `chrome://flags/#enable-webmcp-testing` (or launch Chromium with `--enable-features=WebMCP`). Then run the example and check `await document.modelContext.getTools()` in the console. [`e2e/webmcp/agent.ts`](examples/react-tanstack/e2e/webmcp/agent.ts) is a ~100-line CDP client you can reuse to drive any page's WebMCP tools from Playwright. Agents that drive the page another way, such as Playwright MCP or DevTools, can use the same operations on the global:
-
-```js
-await window.__WARPSTATE__.capture({ name: "bug repro" }); // snapshot object
-await window.__WARPSTATE__.load("warp1.…");                 // reloads into it
-window.__WARPSTATE__.status;                                // "idle" | "pending" | "hydrating" | "ready" | "error"
-```
-
-A typical loop: an agent reproduces a bug, captures it, and hands the compact string to a developer or to a test.
-
-### Connecting an MCP agent (Claude Code, Claude Desktop, Cursor…)
-
-The official [Chrome DevTools MCP](https://github.com/ChromeDevTools/chrome-devtools-mcp) server can list and call a page's WebMCP tools (`list_webmcp_tools`, `execute_webmcp_tool`), so any MCP client reaches warpstate's tools without a custom bridge:
-
-```sh
-claude mcp add chrome-devtools --scope project -- npx -y chrome-devtools-mcp@latest \
-  --categoryExperimentalWebmcp --chromeArg=--enable-features=WebMCP --isolated
-```
-
-Then ask the agent to open your dev server and use the `warpstate_*` tools. Requirements: Chrome 150+ (WebMCP behind `--enable-features=WebMCP`) and a dev build of your app. Chrome DevTools MCP leaves tools marked with the WebMCP `debugging` annotation out of `list_webmcp_tools`, so warpstate does not set that mark by default. Pass `registerWarpTools({ debugging: true })` if you want the tools listed only as developer tools (`--categoryExperimentalThirdParty`).
-
-Every Chrome DevTools MCP tool takes a `pageId` (from `list_pages`), and `execute_webmcp_tool` takes the tool input as a JSON string: `{ "pageId": 1, "toolName": "warpstate_load", "input": "{\"scenario\":\"cart-with-coupon\"}" }`.
-
-> The chain *page → Chrome WebMCP → CDP `WebMCP.invokeTool`* is covered by this repo's e2e tests in CI. The full *MCP client → Chrome DevTools MCP 1.13 → Chrome 157 → warpstate* chain was validated by hand against a local dev server. The tools were listed with `debugging: false`, and `status`, `list_scenarios` and `load { scenario }` all ran, opening the cart at `/cart` with `status: "ready"`. That hop is not automated in CI yet.
 
 ## Production safety
 
@@ -426,29 +442,6 @@ Snapshots from another `app.name` are rejected with `APP_MISMATCH`.
 ### TanStack Query notes
 
 Restored queries are stamped as fetched "now" (`freshen`). While the app is warping, `freeze` sets the client's default `staleTime` to `Infinity` and turns off focus and reconnect refetches and retries. Restored data therefore stays authoritative, and a scenario renders with zero requests. Per-query options still win, and invalidations (after a mutation, for example) still refetch. Turn either option off to get the original behavior.
-
-## Benchmark
-
-`pnpm --filter example-react-tanstack bench` reaches each example scenario two ways: by clicking through the UI, and with `warp()`. Each way ends with the same assertion. Full method and raw data: [`bench/RESULTS.md`](examples/react-tanstack/bench/RESULTS.md).
-
-**CI time** (median of 7, Chromium headless, Vite dev server):
-
-| Simulated API latency | Click-through (3 scenarios) | warp() | Saved |
-| --- | ---: | ---: | ---: |
-| 0 ms | 4.75 s | 3.22 s | 32% |
-| 300 ms | 7.12 s | 3.64 s | 49% |
-
-The cost of `warp()` is flat (≈1 s, mostly app boot). The cost of clicking through grows with every step × request latency. Here the flows are only 4–11 actions long, so real suites with longer setups gain more.
-
-**Agent cost** to bring a browser agent into a scenario, modeling a Playwright-MCP-style agent that receives an ARIA snapshot after every action:
-
-| Scenario | Click-through | warpstate_load |
-| --- | ---: | ---: |
-| cart-with-coupon (11 actions) | 11 calls · ≈1,890 tokens | 3 calls · ≈720 tokens |
-| checkout-review (11 actions) | 11 calls · ≈1,750 tokens | 3 calls · ≈650 tokens |
-| search-results (4 actions) | 4 calls · ≈960 tokens | 3 calls · ≈710 tokens |
-
-Characters are measured. Tokens are an estimate (4 characters per token for text, 2 for base64), and the reasoning an agent does between steps is not counted.
 
 ## Compatibility
 
