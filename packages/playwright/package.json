@@ -45,7 +45,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@warpstate/core": "workspace:^"
+    "@warpstate/core": "workspace:^",
+    "pixelmatch": "^7",
+    "pngjs": "^7"
   },
   "peerDependencies": {
     "@playwright/test": "^1.40.0"
@@ -53,7 +55,11 @@
   "peerDependenciesMeta": {},
   "devDependencies": {
     "@playwright/test": "^1.65.1",
+    "@types/pngjs": "^6.0.5",
     "zod": "^4.6.7"
   },
-  "module": "./dist/index.js"
+  "module": "./dist/index.js",
+  "bin": {
+    "warpstate-shots": "./dist/shots.js"
+  }
 }

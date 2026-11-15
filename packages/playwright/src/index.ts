@@ -13,6 +13,9 @@ import {
   type WarpQueryMode,
   type WarpSnapshot,
 } from "@warpstate/core";
+import { failureSnapshotFixtures, type FailureSnapshotFixtures } from "./failure";
+
+export { failureSnapshotFixtures, failureSnapshotName, type FailureSnapshotFixtures, type WarpCaptureMode } from "./failure";
 
 export interface WarpOptions {
   /**
@@ -150,7 +153,10 @@ export const warpFixtures: Parameters<typeof base.extend<WarpFixtures>>[0] = {
   },
 };
 
-/** Playwright `test` with a `warp` fixture. */
-export const test = base.extend<WarpFixtures>(warpFixtures);
+/**
+ * Playwright `test` with a `warp` fixture, plus an auto fixture that saves a
+ * snapshot of the app when a test fails (see {@link failureSnapshotFixtures}).
+ */
+export const test = base.extend<WarpFixtures & FailureSnapshotFixtures>({ ...warpFixtures, ...failureSnapshotFixtures });
 export { expect };
 export type { WarpSnapshot };

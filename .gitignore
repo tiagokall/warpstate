@@ -69,3 +69,6 @@ Thumbs.db
 .claude/
 .gstack/
 compat/logs/
+
+# warpstate-shots output
+.warpstate/

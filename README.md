@@ -228,6 +228,37 @@ Rules of thumb:
 - Store data with no matching adapter produces a warning on `__WARPSTATE__.warnings`. Set `strict: true` to make it an error.
 - For a Redux-like store: `capture: () => store.getState()`, and `restore: (s) => store.dispatch({ type: "warp/restore", payload: s })` handled by your root reducer.
 
+## When a test fails: reopen the exact state
+
+The `test` from `@warpstate/playwright` includes an auto fixture: when a test fails, it captures the app state of every open page, saves it next to the report (`test-results/<test>/<spec>--<title>.warp.json`) and attaches it, along with a link that reopens it:
+
+```
+http://localhost:5173/?warp=shop--checkout-total
+```
+
+The dev server's catalog includes `test-results/` by default, so the link works as soon as `vite dev` is running. You land on the screen, history and data the test ended with, even after the backend data it used is gone. Usually the screen shows the cause right away, faster than reading a trace.
+
+- Using your own `test`? Extend it: `base.extend(failureSnapshotFixtures)`.
+- `test.use({ warpCapture: "always" | "on-failure" | "off" })` controls when it captures. The default is `"on-failure"`.
+- Pages without the warpstate runtime, such as production builds, are skipped, so the fixture costs nothing there.
+
+## Checking a UI change: `warpstate-shots`
+
+`warpstate-shots` (in `@warpstate/playwright`) opens every scenario in the dev server's catalog, screenshots it, and compares the result with an earlier run. Agents use it to see what a change did before calling it done:
+
+```sh
+npx warpstate-shots --out .warpstate/shots/before        # before the change
+# …edit code…
+npx warpstate-shots --compare .warpstate/shots/before    # lists changed screens, writes *.diff.png
+```
+
+- It waits for two identical frames before shooting, so lazy chunks and skeletons settle first.
+- `--mask` paints over live regions such as clocks and charts.
+- `--storage` loads a logged-in Playwright `storageState`.
+- `--only` picks scenarios.
+
+Output is one line per screen (`same`, `0.05%`, `new`, `error: …`) plus `report.json`. Add `.warpstate/` to `.gitignore`.
+
 ## Other test runners
 
 The injection is a plain script, so any runner that can run code before page scripts can use it:
@@ -382,7 +413,7 @@ Snapshots from another `app.name` are rejected with `APP_MISMATCH`.
 | `@warpstate/react` | `<WarpProvider shortcut download copy promptForName overlay onCapture>`, `useWarp()` → `{ status, isWarping, snapshot, error, capture, download, copy, load }` |
 | `@warpstate/tanstack-query` | `queryAdapter(queryClient, { capture: "all" \| "active", compact, freshen, freeze, dehydrate, hydrate })` |
 | `@warpstate/zustand` | `zustandAdapter(name, store, { partialize, merge })` |
-| `@warpstate/playwright` | `test` / `expect` with a `warp` fixture, `warpFixtures`, `warp(page, input, { url, timeout, waitForReady, query: "restore" \| "refetch" })`, `waitForWarp`, `captureWarp`, `saveSnapshot`, `loadSnapshotInput`, `warpLocation` |
+| `@warpstate/playwright` | `test` / `expect` with a `warp` fixture and failure snapshots, `warpFixtures`, `failureSnapshotFixtures`, `warpstate-shots` CLI, `warp(page, input, { url, timeout, waitForReady, query: "restore" \| "refetch" })`, `waitForWarp`, `captureWarp`, `saveSnapshot`, `loadSnapshotInput`, `warpLocation` |
 | `@warpstate/webmcp` | `registerWarpTools({ signal, prefix, allowLoad, debugging, scenariosEndpoint })`, `getModelContext`, `estimateTokens` |
 | `@warpstate/vite` | `warpstate({ keepInProduction, extraPackages, scenarios, linkParam })`, `loadCatalog`, `SCENARIOS_ENDPOINT` |
 

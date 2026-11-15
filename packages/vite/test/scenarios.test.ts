@@ -128,6 +128,14 @@ describe("?warp= links", () => {
     expect((await openLink("/?warp=%3C%2Fscript%3E")).html).not.toContain('"</script>');
   });
 
+  it("are ASCII-only, so accents survive pages whose <meta charset> ends up past byte 1024", async () => {
+    const accented = { ...snapshot("Berçário — Fase 2 🌱", "/salas"), stores: { notes: { text: "x".repeat(4000) + "ção" } } };
+    const compact = await encodeSnapshot(accented as never);
+    const { inline, global } = await openLink(`/?warp=${compact}`);
+    expect([...inline!].every((char) => char.charCodeAt(0) < 128)).toBe(true);
+    expect(global?.snapshot?.meta?.name).toBe("Berçário — Fase 2 🌱");
+  });
+
   it("leave normal page loads untouched", async () => {
     expect((await openLink("/")).inline).toBeUndefined();
     expect((await openLink("/?other=1")).inline).toBeUndefined();

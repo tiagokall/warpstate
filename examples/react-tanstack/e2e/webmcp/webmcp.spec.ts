@@ -103,7 +103,10 @@ test("an agent discovers the project's scenarios and opens one by id", async ({ 
   await agent.waitForTools(TOOLS);
 
   const listed = structured(await agent.invoke("warpstate_list_scenarios"));
-  const scenarios = listed.scenarios as Array<Record<string, unknown>>;
+  // Only the checked-in scenarios (the catalog also has snapshots saved by tests in test-results/).
+  const scenarios = (listed.scenarios as Array<Record<string, unknown>>).filter((s) =>
+    String(s.file).startsWith("e2e/snapshots/"),
+  );
   expect(scenarios.map((s) => s.id)).toEqual(["cart-with-coupon", "checkout-review", "search-results"]);
   expect(scenarios.find((s) => s.id === "cart-with-coupon")).toMatchObject({
     name: "Cart with coupon",
@@ -126,8 +129,8 @@ test("an agent discovers the project's scenarios and opens one by id", async ({ 
   // Unknown ids fail without touching the page and tell the agent what exists.
   await agent.waitForTools(TOOLS);
   const unknown = structured(await agent.invoke("warpstate_load", { scenario: "../../package.json" }));
-  expect(unknown.error).toBe(
-    'Unknown scenario "../../package.json". Known ids: cart-with-coupon, checkout-review, search-results.',
+  expect(unknown.error).toMatch(
+    /^Unknown scenario "\.\.\/\.\.\/package\.json"\. Known ids: .*cart-with-coupon, checkout-review, search-results/,
   );
 });
 

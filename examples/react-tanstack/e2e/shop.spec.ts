@@ -99,7 +99,8 @@ test.describe("?warp= links (dev server)", () => {
     page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
     await page.goto("/?warp=nope");
     await expect(page.getByRole("heading", { name: "Welcome to Warp Shop" })).toBeVisible();
-    expect(errors.join("\n")).toContain('Unknown scenario "nope" in ?warp=. Known ids: cart-with-coupon, checkout-review, search-results.');
+    // The catalog also lists snapshots saved by tests (test-results/), so check inclusion.
+    expect(errors.join("\n")).toMatch(/Unknown scenario "nope" in \?warp=\. Known ids: .*cart-with-coupon, checkout-review, search-results/);
   });
 });
 

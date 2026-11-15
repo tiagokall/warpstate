@@ -28,7 +28,8 @@ export interface WarpstatePluginOptions {
    * scenario files. In `vite dev` they are served as a read-only catalog at
    * `/__warpstate/scenarios`, which agents use to discover and load scenarios
    * by id. `false` disables the catalog. Default: the whole project root,
-   * skipping node_modules, dist and dot-folders.
+   * skipping node_modules, dist and dot-folders, plus `test-results` (where
+   * failing Playwright tests save their snapshots).
    */
   scenarios?: string[] | false;
   /**
@@ -47,7 +48,10 @@ const escapeRegExp =(value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$
 
 /** Inline script that reports a bad `?warp=` link in the console and in `__WARPSTATE__`. */
 function linkErrorScript(message: string): string {
-  const payload = JSON.stringify({ code: "INVALID_LINK", message }).replace(/</g, "\\u003c");
+  const payload = JSON.stringify({ code: "INVALID_LINK", message }).replace(
+    /[<\u007f-\uffff]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
   return `(function (e) {
   var g = window.__WARPSTATE__ || {};
   g.status = "error"; g.error = e; g.warnings = [];
@@ -68,7 +72,9 @@ export function warpstate(options: WarpstatePluginOptions = {}): Plugin {
   let strip = false;
   let serving = false;
   let root = ".";
-  const dirs = options.scenarios === false ? [] : (options.scenarios ?? ["."]);
+  // Default: the whole project plus Playwright's output folder, so snapshots saved
+  // by failing tests (@warpstate/playwright) can be opened with ?warp=.
+  const dirs = options.scenarios === false ? [] : (options.scenarios ?? [".", "test-results"]);
   const linkParam = options.linkParam === false ? null : (options.linkParam ?? "warp");
   const linkFor = (id: string) => (linkParam ? `/?${linkParam}=${encodeURIComponent(id)}` : undefined);
 
