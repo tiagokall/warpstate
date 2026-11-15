@@ -85,6 +85,14 @@ describe("createInitScript", () => {
     expect((window.__WARPSTATE__!.snapshot as WarpSnapshot).meta?.name).toBe(tricky.meta.name);
   });
 
+  it("is pure ASCII, so it survives pages served without a usable charset", () => {
+    const accented = { ...snapshot, meta: { name: "Berçário — Fase 2 🌱 ✓" }, stores: { s: { note: "ação\u2028x" } } };
+    const script = createInitScript(accented);
+    expect([...script].every((char) => char.charCodeAt(0) < 128)).toBe(true);
+    new Function(script)();
+    expect(window.__WARPSTATE__?.snapshot).toEqual(accented);
+  });
+
   it("drops a stale pending snapshot so the injected one wins", () => {
     sessionStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify({ ...snapshot, meta: { name: "stale" } }));
     new Function(createInitScript(snapshot))();

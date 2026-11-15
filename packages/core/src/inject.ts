@@ -17,10 +17,15 @@ import { PENDING_STORAGE_KEY } from "./pending";
 export function createInitScript(snapshot: WarpSnapshot | unknown): string {
   // JSON is a valid JS expression; escape characters that could close a <script> tag
   // or break older parsers if the string is ever inlined into HTML.
-  const payload = JSON.stringify(snapshot)
-    .replace(/</g, "\\u003c")
-    .replace(/\u2028/g, "\\u2028")
-    .replace(/\u2029/g, "\\u2029");
+  //
+  // Everything outside ASCII is escaped too: when this script is inlined at the top
+  // of <head> (?warp= links), a large payload pushes <meta charset> past the first
+  // 1024 bytes, browsers fall back to windows-1252 and "Berçário" turns into
+  // "BerÃ§Ã¡rio". ASCII-only output reads the same under any charset.
+  const payload = JSON.stringify(snapshot).replace(
+    /[<\u007f-\uffff]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
 
   return `(function (snapshot) {
   if (window.top !== window) return;
