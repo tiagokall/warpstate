@@ -54,6 +54,22 @@ test.describe("opening scenarios with warp()", () => {
     expect(await apiCalls(page)).toEqual([]);
   });
 
+  test("the address bar follows the restored route", async ({ page, warp }) => {
+    await warp("e2e/snapshots/cart-with-coupon.warp.json");
+    expect(new URL(page.url()).pathname).toBe("/cart");
+    await page.getByRole("button", { name: "Back" }).click();
+    await expect(page.getByRole("heading", { name: "Warp Mug" })).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe("/products/1");
+  });
+
+  test('query: "refetch" keeps route and stores but loads data from the API', async ({ page, warp }) => {
+    await warp("e2e/snapshots/cart-with-coupon.warp.json", { query: "refetch" });
+    await expect(page.getByTestId("coupon")).toHaveText("Coupon WARP10 applied");
+    await page.getByRole("button", { name: "Back" }).click();
+    await expect(page.getByRole("heading", { name: "Warp Mug" })).toBeVisible();
+    expect(await apiCalls(page)).toContain("product/1");
+  });
+
   test("compact snapshots work the same way", async ({ page, warp }) => {
     const compact = await encodeSnapshot(await readSnapshot("cart-with-coupon"));
     expect(compact.length).toBeLessThan(JSON.stringify(await readSnapshot("cart-with-coupon")).length);
@@ -70,7 +86,9 @@ test.describe("?warp= links (dev server)", () => {
     expect(await warpLocation(page)).toBe("/checkout?step=review");
     expect(await apiCalls(page)).toEqual([]);
 
-    // Reloading the link resets the screen to the same state.
+    // The address bar shows the route and keeps the link param...
+    expect(new URL(page.url()).pathname + new URL(page.url()).search).toBe("/checkout?step=review&warp=checkout-review");
+    // ...so reloading resets the screen to the same state.
     await page.getByRole("button", { name: "Back" }).click();
     await page.reload();
     await expect(page.getByTestId("ship-to")).toBeVisible();

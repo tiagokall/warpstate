@@ -380,13 +380,17 @@ Snapshots from another `app.name` are rejected with `APP_MISMATCH`.
 | `@warpstate/core` | `encodeValue` / `decodeValue` (Map, Set, Date, bigint), `WarpSnapshot`, `warpSnapshotSchema`, `parseSnapshot`, `safeParseSnapshot`, `WarpAdapter`, `defineAdapter`, `registerAdapter`, `configureWarp`, `initWarp`, `getActiveSnapshot`, `isWarping`, `captureSnapshot`, `loadSnapshot`, `createInitScript`, `encodeSnapshot`, `decodeSnapshot`, `serializeSnapshot`, `downloadSnapshot`, `copySnapshot`, `WarpError` |
 | `@warpstate/tanstack-router` | `createWarpRouter(options & { warp })`, `routerAdapter`, `createSnapshotHistory`, `HistoryTracker` |
 | `@warpstate/react` | `<WarpProvider shortcut download copy promptForName overlay onCapture>`, `useWarp()` → `{ status, isWarping, snapshot, error, capture, download, copy, load }` |
-| `@warpstate/tanstack-query` | `queryAdapter(queryClient, { compact, freshen, freeze, dehydrate, hydrate })` |
+| `@warpstate/tanstack-query` | `queryAdapter(queryClient, { capture: "all" \| "active", compact, freshen, freeze, dehydrate, hydrate })` |
 | `@warpstate/zustand` | `zustandAdapter(name, store, { partialize, merge })` |
-| `@warpstate/playwright` | `test` / `expect` with a `warp` fixture, `warpFixtures`, `warp(page, input, { url, timeout, waitForReady })`, `waitForWarp`, `captureWarp`, `saveSnapshot`, `loadSnapshotInput`, `warpLocation` |
+| `@warpstate/playwright` | `test` / `expect` with a `warp` fixture, `warpFixtures`, `warp(page, input, { url, timeout, waitForReady, query: "restore" \| "refetch" })`, `waitForWarp`, `captureWarp`, `saveSnapshot`, `loadSnapshotInput`, `warpLocation` |
 | `@warpstate/webmcp` | `registerWarpTools({ signal, prefix, allowLoad, debugging, scenariosEndpoint })`, `getModelContext`, `estimateTokens` |
 | `@warpstate/vite` | `warpstate({ keepInProduction, extraPackages, scenarios, linkParam })`, `loadCatalog`, `SCENARIOS_ENDPOINT` |
 
-`createWarpRouter`'s `warp` option accepts `adapters`, `app`, `migrate`, `allowInProduction`, `strict` and `captureStorage`.
+`createWarpRouter`'s `warp` option accepts `adapters`, `app`, `migrate`, `allowInProduction`, `strict`, `captureStorage` and `mirrorUrl`.
+
+- **Address bar.** A warped app runs on a memory history; by default (`mirrorUrl: true`) its current route is mirrored into the address bar, so copying the URL or opening a new tab lands on the same route (with live data). `?warp=` links keep their parameter, so reloading reopens the scenario.
+- **Live data instead of the saved copy.** `warp(page, snapshot, { query: "refetch" })` (and `warpstate_load { query: "refetch" }`) restores route, history and stores but lets the app fetch from the server. Use it for tests that check server behaviour.
+- **Smaller snapshots.** Apps that prefetch heavily (e.g. `defaultPreload: "intent"`) accumulate a large query cache. `queryAdapter(client, { capture: "active" })` captures only what the current screen uses; other screens fetch when visited.
 
 ### TanStack Query notes
 
@@ -425,7 +429,7 @@ See [COMPATIBILITY.md](COMPATIBILITY.md) for the tested library versions. The ma
 - **Live connections** (websockets, SSE, WebRTC) are not part of the snapshot. They reconnect as the app normally would, and the messages they deliver can change state after `ready`. Mock them in tests (`page.routeWebSocket`).
 - **Timers and animations** in flight are not captured. A countdown restarts and a toast that was visible is gone. Freeze time with `page.clock` if it matters.
 - **Server state** is not touched. The query cache makes the UI render without fetching, but mutations still reach your API, so mock it (`page.route`) or seed it as usual.
-- **Memory history while warping**: the browser URL is set once to the current entry and does not follow later in-app navigation. Use `warpLocation(page)` instead of `page.url()`, and the app's own back button instead of `page.goBack()`.
+- **Memory history while warping**: the address bar mirrors the current route (`mirrorUrl`), but the browser's own history is not rebuilt. Use the app's back button instead of `page.goBack()`; `warpLocation(page)` and `page.url()` both give the current route.
 - **Module-level side effects** that read state before `createWarpRouter` runs see the pre-restore state. Snapshot `storage` is the exception: it is written before any app code.
 - **Uncontrolled inputs** keep only what was saved in a store. Text typed into an uncontrolled field and never committed to state is not captured.
 - **Snapshots go stale** as the app evolves. Use `app.schemaVersion` + `migrate`, and re-record (`pnpm record` in the example) when needed.

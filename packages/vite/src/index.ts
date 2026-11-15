@@ -114,7 +114,10 @@ export function warpstate(options: WarpstatePluginOptions = {}): Plugin {
           }
           input = await entry.load();
         }
-        script = createInitScript(await decodeSnapshot(input, { source: `?${linkParam}=` }));
+        const keep = JSON.stringify(`${linkParam}=${encodeURIComponent(value)}`).replace(/</g, "\\u003c");
+        script =
+          createInitScript(await decodeSnapshot(input, { source: `?${linkParam}=` })) +
+          `if (window.__WARPSTATE__) window.__WARPSTATE__.keepParams = ${keep};\n`;
       } catch (error) {
         script = linkErrorScript(error instanceof Error ? error.message : String(error));
       }

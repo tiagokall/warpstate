@@ -1,4 +1,5 @@
 import {
+  applyQueryMode,
   encodeSnapshot,
   getActiveSnapshot,
   getAdapters,
@@ -229,6 +230,14 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
             description: "A compact 'warp1.' string, a JSON string or a snapshot object.",
             anyOf: [{ type: "string" }, { type: "object" }],
           },
+          query: {
+            type: "string",
+            enum: ["restore", "refetch"],
+            default: "restore",
+            description:
+              "'refetch' restores route, history and stores but fetches data from the server " +
+              "(current data instead of the saved copy).",
+          },
         },
         // No top-level oneOf: several model APIs reject it in tool schemas. Checked in execute().
         ...(endpoint ? {} : { required: ["snapshot"] }),
@@ -249,7 +258,9 @@ export function registerWarpTools(options: WarpToolsOptions = {}): () => void {
             throw new Error(`Pass { scenario: "<id>" } (see ${prefix}list_scenarios) or { snapshot }.`);
           }
           const snapshot = await decodeSnapshot(source, { source: typeof input.scenario === "string" ? `scenario "${input.scenario}"` : "warpstate_load" });
-          await loadSnapshot(snapshot, { reload: false });
+          await loadSnapshot(applyQueryMode(snapshot, input.query === "refetch" ? "refetch" : "restore"), {
+            reload: false,
+          });
           // Let the tool result reach the agent before the page goes away.
           setTimeout(() => window.location.reload(), 50);
           return result({

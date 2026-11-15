@@ -31,6 +31,17 @@ describe("queryAdapter", () => {
     expect(compact).not.toContain("queryHash");
   });
 
+  it('capture: "active" keeps only queries the current screen observes', () => {
+    const client = seeded();
+    const observer = new QueryObserver(client, { queryKey: ["user"], queryFn: () => ({ name: "Ada" }), enabled: false });
+    const unsubscribe = observer.subscribe(() => undefined);
+    const all = queryAdapter(client).capture() as WarpQueryState;
+    const active = queryAdapter(client, { capture: "active" }).capture() as WarpQueryState;
+    unsubscribe();
+    expect(all.queries.map((q) => q.queryKey)).toEqual([["products", { page: 1 }], ["user"]]);
+    expect(active.queries.map((q) => q.queryKey)).toEqual([["user"]]);
+  });
+
   it("can capture the raw dehydrate() output", () => {
     const captured = queryAdapter(seeded(), { compact: false }).capture();
     expect(JSON.stringify(captured)).toContain("queryHash");

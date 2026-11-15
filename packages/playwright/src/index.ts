@@ -3,12 +3,14 @@ import { resolve } from "node:path";
 import { test as base, expect, type Page } from "@playwright/test";
 import {
   WarpError,
+  applyQueryMode,
   createInitScript,
   decodeSnapshot,
   encodeSnapshot,
   isEncodedSnapshot,
   serializeSnapshot,
   type WarpGlobal,
+  type WarpQueryMode,
   type WarpSnapshot,
 } from "@warpstate/core";
 
@@ -22,6 +24,11 @@ export interface WarpOptions {
   waitForReady?: boolean;
   /** Milliseconds to wait for hydration. Default: `15000`. */
   timeout?: number;
+  /**
+   * `"refetch"` restores route, history and stores but lets the app fetch its
+   * data from the server, for tests that check server behaviour. Default: `"restore"`.
+   */
+  query?: WarpQueryMode;
 }
 
 /** A snapshot object, a path to a `.warp.json` / `.warp` file, a JSON string or a compact `warp1.` string. */
@@ -102,7 +109,7 @@ export async function waitForWarp(page: Page, options: { timeout?: number } = {}
  * The snapshot is re-applied on every navigation of this page (including reloads).
  */
 export async function warp(page: Page, input: SnapshotInput, options: WarpOptions = {}): Promise<WarpSnapshot> {
-  const snapshot = await loadSnapshotInput(input);
+  const snapshot = applyQueryMode(await loadSnapshotInput(input), options.query);
   await page.addInitScript({ content: createInitScript(snapshot) });
   const url = options.url ?? snapshot.router.entries[snapshot.router.index] ?? "/";
   await page.goto(url);

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  applyQueryMode,
   captureSnapshot,
   decodeValue,
   encodeValue,
@@ -58,5 +59,16 @@ describe("capture and restore", () => {
     registerAdapter({ name: "sensors", capture: () => undefined, restore: (data) => void (restored = data) });
     expect(restored).toEqual(sensors);
     expect(restored).toBeInstanceOf(Map);
+  });
+});
+
+describe("applyQueryMode", () => {
+  const snapshot = { warpstate: 1 as const, router: { entries: ["/"], index: 0 }, stores: { a: 1 }, query: { queries: [] } };
+  it('"refetch" drops the data cache and keeps everything else', () => {
+    expect(applyQueryMode(snapshot, "refetch")).toEqual({ warpstate: 1, router: snapshot.router, stores: { a: 1 } });
+    expect(snapshot.query).toBeDefined(); // not mutated
+  });
+  it('"restore" (default) returns the snapshot as is', () => {
+    expect(applyQueryMode(snapshot)).toBe(snapshot);
   });
 });

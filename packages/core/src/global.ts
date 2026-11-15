@@ -29,6 +29,11 @@ export interface WarpGlobal {
   warnings: string[];
   /** Set by the test runner when it already wrote `snapshot.storage` before boot. */
   storageRestored?: boolean;
+  /**
+   * Query params kept in the address bar when the router mirrors its route there
+   * (set by `?warp=` links, e.g. `"warp=checkout-review"`), so a reload reopens the scenario.
+   */
+  keepParams?: string;
   /** Current router href, provided by the router integration. */
   location?: () => string | undefined;
   /** Captures the current app state; available whenever the warpstate runtime is loaded. */

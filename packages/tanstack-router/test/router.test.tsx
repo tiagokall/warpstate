@@ -110,7 +110,34 @@ describe("createWarpRouter with a snapshot", () => {
     await waitForReady();
     expect(getWarpGlobal()?.status).toBe("ready");
     expect(screen.getByText("back from cart")).toBeTruthy();
-    expect(window.location.pathname).toBe("/"); // the browser URL is untouched
+    // The router runs on a memory history; the address bar mirrors its route.
+    expect(window.location.pathname).toBe("/cart");
+  });
+
+  it("keeps mirroring as the app navigates, and can be turned off", async () => {
+    const router = createWarpRouter({ routeTree: makeTree(), warp: { adapters: [cartAdapter] } });
+    render(<RouterProvider router={router} />);
+    await waitForReady();
+    router.history.back();
+    await screen.findByText(/product 42/);
+    expect(window.location.pathname).toBe("/products/42");
+    cleanup();
+
+    resetWarp();
+    window.history.replaceState(null, "", "/");
+    window.__WARPSTATE__ = { snapshot: { warpstate: 1, router: { entries: ["/cart"], index: 0 } } } as never;
+    const unmirrored = createWarpRouter({ routeTree: makeTree(), warp: { mirrorUrl: false } });
+    render(<RouterProvider router={unmirrored} />);
+    await waitForReady();
+    expect(window.location.pathname).toBe("/");
+  });
+
+  it("keeps ?warp= link params in the mirrored URL so a reload reopens the scenario", async () => {
+    (window.__WARPSTATE__ as { keepParams?: string }).keepParams = "warp=cart-scenario";
+    const router = createWarpRouter({ routeTree: makeTree(), warp: { adapters: [cartAdapter] } });
+    render(<RouterProvider router={router} />);
+    await waitForReady();
+    expect(window.location.pathname + window.location.search).toBe("/cart?warp=cart-scenario");
   });
 
   it("restores the back stack", async () => {

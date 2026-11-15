@@ -5,6 +5,7 @@ import {
   type DehydrateOptions,
   type DehydratedState,
   type HydrateOptions,
+  type Query,
   type QueryClient,
   type QueryKey,
 } from "@tanstack/query-core";
@@ -13,6 +14,15 @@ import type { WarpAdapter } from "@warpstate/core";
 export interface QueryAdapterOptions {
   /** Passed to `dehydrate()`. By default only successful queries are captured. */
   dehydrate?: DehydrateOptions;
+  /**
+   * Which queries to capture:
+   * - `"all"` (default): everything in the cache, so going Back through the
+   *   restored history works offline too.
+   * - `"active"`: only queries some mounted component is using (the current
+   *   screen). Much smaller snapshots in apps that prefetch heavily; other
+   *   screens fetch their data when visited.
+   */
+  capture?: "all" | "active";
   /** Passed to `hydrate()`. */
   hydrate?: HydrateOptions;
   /**
@@ -117,7 +127,12 @@ export function queryAdapter(
   return {
     name: "query",
     capture() {
-      const state = dehydrate(queryClient, options.dehydrate);
+      const base = options.dehydrate?.shouldDehydrateQuery ?? ((query: Query) => query.state.status === "success");
+      const state = dehydrate(queryClient, {
+        ...options.dehydrate,
+        shouldDehydrateQuery:
+          options.capture === "active" ? (query) => query.getObserversCount() > 0 && base(query) : base,
+      });
       return compact ? compactState(state) : state;
     },
     restore(data) {

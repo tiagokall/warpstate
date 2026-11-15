@@ -53,6 +53,7 @@ export const resetWarp: typeof Real.resetWarp = noop;
 export const captureStorage: typeof Real.captureStorage = noop;
 export const restoreStorage: typeof Real.restoreStorage = noop;
 export const findNonSerializable: typeof Real.findNonSerializable = () => [];
+export const applyQueryMode: typeof Real.applyQueryMode = (snapshot) => snapshot;
 export const TYPE_TAG: typeof Real.TYPE_TAG = "$warp";
 export const encodeValue: typeof Real.encodeValue = (value) => value;
 export const decodeValue: typeof Real.decodeValue = (value) => value;

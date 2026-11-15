@@ -25,6 +25,23 @@ export interface WarpRouterOptions extends WarpConfig {
    * restored before the first render.
    */
   adapters?: Array<WarpAdapter<any>>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  /**
+   * While booted from a snapshot, the router runs on a memory history, so the
+   * browser's address bar would keep showing the URL the page was opened with.
+   * When `true`, the current route is mirrored into it with `replaceState`, so
+   * copying the URL or opening it in a new tab lands on the same route (with live
+   * data). Default: `true`.
+   */
+  mirrorUrl?: boolean;
+}
+
+/** `href` with extra query params appended before the hash. */
+function withParams(href: string, params: string | undefined): string {
+  if (!params) return href;
+  const hashAt = href.indexOf("#");
+  const path = hashAt === -1 ? href : href.slice(0, hashAt);
+  const hash = hashAt === -1 ? "" : href.slice(hashAt);
+  return `${path}${path.includes("?") ? "&" : "?"}${params}${hash}`;
 }
 
 export type WarpRouterAdapter = WarpAdapter<WarpRouterState> & { dispose(): void };
@@ -70,7 +87,7 @@ export function createWarpRouter<
   > & { warp?: WarpRouterOptions },
 ) {
   const { warp, ...routerOptions } = options;
-  const { adapters = [], ...config } = warp ?? {};
+  const { adapters = [], mirrorUrl = true, ...config } = warp ?? {};
 
   const snapshot = initWarp(config);
   for (const adapter of adapters) registerAdapter(adapter);
@@ -103,6 +120,23 @@ export function createWarpRouter<
 
   const global = getWarpGlobal();
   if (global) global.location = () => router.history.location.href;
+
+  if (snapshot && mirrorUrl && typeof window !== "undefined") {
+    const mirror = () => {
+      try {
+        // keepParams: e.g. "warp=checkout-review" for ?warp= links, so a reload
+        // reopens the same scenario instead of the bare route.
+        const url = withParams(router.history.location.href, getWarpGlobal()?.keepParams);
+        if (url !== window.location.pathname + window.location.search + window.location.hash) {
+          window.history.replaceState(window.history.state, "", url);
+        }
+      } catch {
+        // Sandboxed frames and some test environments refuse replaceState.
+      }
+    };
+    mirror();
+    router.history.subscribe(mirror);
+  }
 
   if (snapshot) {
     // Newer versions emit onResolved then onRendered after the initial render; older
