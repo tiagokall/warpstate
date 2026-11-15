@@ -30,6 +30,8 @@ jobs:
       - run: pnpm test
       - name: Production bundle contains no warpstate runtime
         run: pnpm --filter example-react-tanstack check:prod
+      - name: CommonJS consumers can require() the node packages
+        run: pnpm --filter example-react-tanstack check:cjs
 
   e2e:
     name: E2E (Playwright)

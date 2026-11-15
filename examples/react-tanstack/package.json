@@ -12,7 +12,8 @@
     "check:prod": "vite build && node scripts/check-prod-bundle.mjs",
     "bench": "BENCH=1 playwright test --project=bench",
     "e2e:webmcp": "playwright test --project=webmcp",
-    "e2e:webmcp:chrome": "WEBMCP_CHANNEL=chrome playwright test --project=webmcp"
+    "e2e:webmcp:chrome": "WEBMCP_CHANNEL=chrome playwright test --project=webmcp",
+    "check:cjs": "node scripts/check-cjs.cjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.107.1",

@@ -32,6 +32,11 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.node } },
   },
   {
+    files: ["**/*.cjs"],
+    languageOptions: { sourceType: "commonjs", globals: { ...globals.node } },
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  {
     // Playwright fixtures receive a `use` callback that is not a React hook.
     files: ["packages/playwright/**", "**/e2e/**"],
     rules: { "react-hooks/rules-of-hooks": "off" },
