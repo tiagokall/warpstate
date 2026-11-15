@@ -13,11 +13,20 @@ function setup(config: Partial<ResolvedConfig>, options?: Parameters<typeof warp
       throw new Error(message);
     }),
   };
-  const resolveId = (source: string) => (plugin.resolveId as Hook).call(ctx, source, "/app/main.tsx", {});
-  return { ctx, resolveId };
+  const hook = plugin.resolveId as unknown as { filter: { id: RegExp }; handler: Hook };
+  const resolveId = (source: string) => hook.handler.call(ctx, source, "/app/main.tsx", {});
+  return { ctx, resolveId, filter: hook.filter.id };
 }
 
 describe("warpstate vite plugin", () => {
+  it("only runs resolveId for the runtime packages (hook filter)", () => {
+    const { filter } = setup({ command: "build", isProduction: true }, { extraPackages: ["@acme/warp-adapter.v2"] });
+    for (const pkg of [...RUNTIME_PACKAGES, "@acme/warp-adapter.v2"]) expect(filter.test(pkg)).toBe(true);
+    for (const other of ["react", "@warpstate/core/noop", "@warpstate/corex", "@acme/warp-adapterXv2"]) {
+      expect(filter.test(other)).toBe(false);
+    }
+  });
+
   it("swaps every runtime package for its noop entry in production builds", async () => {
     const { resolveId } = setup({ command: "build", isProduction: true });
     for (const pkg of RUNTIME_PACKAGES) {

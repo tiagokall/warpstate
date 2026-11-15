@@ -81,6 +81,8 @@ pnpm add -D @warpstate/playwright @warpstate/vite
 
 `zod` (v3.25+ or v4) is a peer dependency of `@warpstate/core`.
 
+Browser packages ship ESM. The Node-side packages (`@warpstate/core`, `@warpstate/playwright`, `@warpstate/vite`) ship both ESM and CommonJS, so Playwright projects without `"type": "module"`, where specs are compiled to `require()`, work as is.
+
 ### 2. Strip it from production builds
 
 ```diff
@@ -221,7 +223,7 @@ registerAdapter(themeAdapter);
 Rules of thumb:
 
 - `restore` runs **synchronously at registration** when booting from a snapshot. Register adapters before the first render (the `adapters` option does that). If `restore` returns a promise, `ready` waits for it.
-- Capture **data, not instances**: functions, Maps, Sets, Dates and class instances do not survive JSON. warpstate warns about each such path when capturing.
+- Capture **data, not instances**. `Map`, `Set`, `Date` and `bigint` are fine anywhere in captured data (including the query cache): they are stored as tagged objects such as `{ "$warp": "Map", "entries": [...] }` and come back as the real type on restore. Functions and class instances do not survive JSON. warpstate warns about each such path when capturing.
 - `"router"` and `"query"` are reserved names. They map to `snapshot.router` and `snapshot.query`.
 - Store data with no matching adapter produces a warning on `__WARPSTATE__.warnings`. Set `strict: true` to make it an error.
 - For a Redux-like store: `capture: () => store.getState()`, and `restore: (s) => store.dispatch({ type: "warp/restore", payload: s })` handled by your root reducer.
@@ -375,7 +377,7 @@ Snapshots from another `app.name` are rejected with `APP_MISMATCH`.
 
 | Package | Exports |
 | --- | --- |
-| `@warpstate/core` | `WarpSnapshot`, `warpSnapshotSchema`, `parseSnapshot`, `safeParseSnapshot`, `WarpAdapter`, `defineAdapter`, `registerAdapter`, `configureWarp`, `initWarp`, `getActiveSnapshot`, `isWarping`, `captureSnapshot`, `loadSnapshot`, `createInitScript`, `encodeSnapshot`, `decodeSnapshot`, `serializeSnapshot`, `downloadSnapshot`, `copySnapshot`, `WarpError` |
+| `@warpstate/core` | `encodeValue` / `decodeValue` (Map, Set, Date, bigint), `WarpSnapshot`, `warpSnapshotSchema`, `parseSnapshot`, `safeParseSnapshot`, `WarpAdapter`, `defineAdapter`, `registerAdapter`, `configureWarp`, `initWarp`, `getActiveSnapshot`, `isWarping`, `captureSnapshot`, `loadSnapshot`, `createInitScript`, `encodeSnapshot`, `decodeSnapshot`, `serializeSnapshot`, `downloadSnapshot`, `copySnapshot`, `WarpError` |
 | `@warpstate/tanstack-router` | `createWarpRouter(options & { warp })`, `routerAdapter`, `createSnapshotHistory`, `HistoryTracker` |
 | `@warpstate/react` | `<WarpProvider shortcut download copy promptForName overlay onCapture>`, `useWarp()` → `{ status, isWarping, snapshot, error, capture, download, copy, load }` |
 | `@warpstate/tanstack-query` | `queryAdapter(queryClient, { compact, freshen, freeze, dehydrate, hydrate })` |
@@ -419,7 +421,7 @@ See [COMPATIBILITY.md](COMPATIBILITY.md) for the tested library versions. The ma
 
 ## Limitations
 
-- **Non-serializable state** (functions, class instances, Maps/Sets, DOM nodes, `File`s, open promises) cannot be captured. Keep it out of stores, or rebuild it in your adapter's `restore`.
+- **Non-serializable state** (functions, class instances, DOM nodes, `File`s, open promises) cannot be captured. Keep it out of stores, or rebuild it in your adapter's `restore`.
 - **Live connections** (websockets, SSE, WebRTC) are not part of the snapshot. They reconnect as the app normally would, and the messages they deliver can change state after `ready`. Mock them in tests (`page.routeWebSocket`).
 - **Timers and animations** in flight are not captured. A countdown restarts and a toast that was visible is gone. Freeze time with `page.clock` if it matters.
 - **Server state** is not touched. The query cache makes the UI render without fetching, but mutations still reach your API, so mock it (`page.route`) or seed it as usual.

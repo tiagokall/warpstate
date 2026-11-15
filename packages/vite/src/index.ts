@@ -41,6 +41,8 @@ export interface WarpstatePluginOptions {
   linkParam?: string | false;
 }
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 /** Inline script that reports a bad `?warp=` link in the console and in `__WARPSTATE__`. */
 function linkErrorScript(message: string): string {
   const payload = JSON.stringify({ code: "INVALID_LINK", message }).replace(/</g, "\\u003c");
@@ -142,13 +144,18 @@ export function warpstate(options: WarpstatePluginOptions = {}): Plugin {
         })().catch(next);
       });
     },
-    async resolveId(source, importer, resolveOptions) {
-      if (!strip || !packages.has(source)) return null;
-      const resolved = await this.resolve(`${source}/noop`, importer, { ...resolveOptions, skipSelf: true });
-      if (!resolved) {
-        this.error(`[warpstate] ${source} has no "/noop" entry; cannot strip it from the production build.`);
-      }
-      return resolved;
+    resolveId: {
+      // Hook filter (Vite 6.3+, Rolldown): the hook only runs for the runtime
+      // packages instead of every import in the app. Older Vite ignores it.
+      filter: { id: new RegExp(`^(${[...packages].map(escapeRegExp).join("|")})$`) },
+      async handler(source, importer, resolveOptions) {
+        if (!strip || !packages.has(source)) return null;
+        const resolved = await this.resolve(`${source}/noop`, importer, { ...resolveOptions, skipSelf: true });
+        if (!resolved) {
+          this.error(`[warpstate] ${source} has no "/noop" entry; cannot strip it from the production build.`);
+        }
+        return resolved;
+      },
     },
   };
 }
